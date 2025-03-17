@@ -1,0 +1,27 @@
+/* colors and color variables */
+:root {
+  
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+ 
+  }
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 0.2em 1.5em;
+  font-size: 1rem;
+}
+
+input {
+  font-size: 1rem;
+}
