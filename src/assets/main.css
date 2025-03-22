@@ -1,2 +1,27 @@
 @import './base.css';
 
+
+#designer {
+  position: relative;
+
+  height: 100vh;
+  overflow: hidden;
+
+  background-color: lightgray;
+}
+
+#designer-toolbox {
+  position: relative;
+  top: 2em;
+  left: 1em;
+
+  padding: 1em;
+  width: fit-content;
+
+  background-color: white;
+}
+
+#designer-tool {
+  position: absolute;
+  visibility: hidden;
+}
