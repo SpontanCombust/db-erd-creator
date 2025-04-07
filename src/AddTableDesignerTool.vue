@@ -11,7 +11,7 @@ const designerState = useDesignerState();
 
 defineExpose({
   designerClick(ev: MouseEvent) {
-    const tab = new DbTable({ x: ev.offsetX, y: ev.offsetY });
+    const tab = new DbTable(null, { x: ev.offsetX, y: ev.offsetY });
     designerState.tables.push(tab);
     designerState.toolMode = DesignerToolMode.Move;
   }

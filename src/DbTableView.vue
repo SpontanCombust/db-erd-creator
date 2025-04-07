@@ -60,7 +60,7 @@ const relationCreationActive = computed(() => {
       <template v-for="column in props.model.columns">
         <DbTableColumnView :model="column"/>
       </template>
-      <button @click="props.model.columns.push(new DbTableColumn())">+</button>
+      <button @click="props.model.columns.push(new DbTableColumn(null))">+</button>
     </ul>
   </div>
   
@@ -70,7 +70,6 @@ const relationCreationActive = computed(() => {
 <style lang="css">
 
 .table-container {
-  position: absolute;
   display: flex;
   flex-direction: column;
   

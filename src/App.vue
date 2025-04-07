@@ -1,6 +1,8 @@
 <script setup lang="ts">
 
-import { computed, onUpdated, reactive, useTemplateRef } from 'vue';
+import { computed, onUpdated, reactive, ref, useTemplateRef } from 'vue';
+import { ConnectionMode, VueFlow, type Connection, type Edge, type Node } from '@vue-flow/core';
+import { Background } from '@vue-flow/background';
 
 import DbTable from './model/DbTable';
 import DbTableView from './DbTableView.vue';
@@ -9,6 +11,11 @@ import { provideDesignerState } from './composables/useDesignerState';
 import DesignerToolMode from './model/DesignerToolMode';
 import MoveDesignerTool from './MoveDesignerTool.vue';
 import AddTableDesignerTool from './AddTableDesignerTool.vue';
+import DbTableRelation from './model/DbTableRelation';
+import DbTableRelationKind from './model/DbTableRelationKind';
+import DbTableColumn from './model/DbTableColumn';
+import SqlEmitterService from './services/SqlEmitterService';
+
 
 
 const designerRef = useTemplateRef('designer');
@@ -53,6 +60,62 @@ function onTableClick(ev: MouseEvent, tab: DbTable) {
   designerToolRef.value?.tableClick?.(ev, tab);
 }
 
+
+const nodes = computed<Node[]>(() => designerState.tables.map(t => ({
+  id: t.id,
+  position: t.designerPosition,
+  type: 'table',
+  data: t,
+} as Node)));
+
+const edges = computed<Edge[]>(() => designerState.relations.map(r => ({
+  id: r.connectedFromColumn.id + '--' + r.connectedToColumn.id,
+  source: r.connectedFromTable.id,
+  sourceHandle: r.connectedFromColumn.id,
+  target: r.connectedToTable.id,
+  targetHandle: r.connectedToColumn.id
+} as Edge)));
+
+
+function onConnectTables(params: Connection) {
+  if (!params.sourceHandle || !params.targetHandle // make sure handles are valid
+    || params.source == params.target // make sure you cannot connect table to itself
+  ) {
+    return;
+  }
+
+  let srcTable: DbTable | null = null;
+  let srcColumn: DbTableColumn | null = null;
+  let dstTable: DbTable | null = null;
+  let dstColumn: DbTableColumn | null = null;
+
+  for (const tab of designerState.tables) {
+    for (const col of tab.columns) {
+      if (col.id == params.sourceHandle) {
+        srcTable = tab;
+        srcColumn = col;
+      }
+      else if (col.id == params.targetHandle) {
+        dstTable = tab;
+        dstColumn = col;
+      }
+    }
+  }
+
+  if (srcTable && srcColumn && dstTable && dstColumn) {
+    designerState.relations.push(new DbTableRelation(srcTable, srcColumn, dstTable, dstColumn, DbTableRelationKind.OneToOne));
+  }
+}
+
+
+const generatedSql = ref('');
+
+function generateSql() {
+  const svc = new SqlEmitterService();
+  generatedSql.value = svc.emitSql(designerState.tables, designerState.relations);
+}
+
+
 </script>
 
 
@@ -62,7 +125,7 @@ function onTableClick(ev: MouseEvent, tab: DbTable) {
   </header>
 
   <main>
-    <div ref="designer" id="designer" @click.self="onDesignerClick">
+    <div ref="designer" id="designer">
       <div id="designer-toolbox">
         <button @click="designerState.toolMode = DesignerToolMode.Move">Move</button>
         <button @click="designerState.toolMode = DesignerToolMode.AddTable">Add table</button>
@@ -70,25 +133,28 @@ function onTableClick(ev: MouseEvent, tab: DbTable) {
         <button @click="designerState.toolMode = DesignerToolMode.AddRelation1N">Add 1-N relation</button>
         <button @click="designerState.toolMode = DesignerToolMode.AddRelationNN">Add N-N relation</button>
         <button @click="designerState.toolMode = DesignerToolMode.AddRelationInheritance">Add inheritence relation</button>
+        <button @click="generateSql">Generate SQL</button>
       </div>
+
       <div id="designer-tool">
         <component :is="designerToolComponent" ref="designerTool"/>
       </div>
 
-      <div id="designer-tables">
-        <template v-for="t of designerState.tables">
-          <DbTableView :model="t"
-            @mousedown="(ev) => onTableMouseDown(ev, t)"
-            @mouseup="(ev) => onTableMouseUp(ev, t)"
-            @click="(ev) => onTableClick(ev, t)"
-          />
-        </template>
+      <div id="designer-output" v-if="generatedSql">
+        <textarea>{{ generatedSql }}</textarea>
+        <button @click="generatedSql = ''">Close</button>
       </div>
-      <div id="designer-table-relations">
-        <template v-for="r of designerState.relations">
 
+      <VueFlow :nodes="nodes" :edges="edges" :connection-mode="ConnectionMode.Strict" 
+        @pane-click="(ev) => onDesignerClick(ev)"
+        @connect="onConnectTables"
+      >
+        <Background pattern-color="#555" :gap="20"/>
+
+        <template #node-table="nodeProps">
+          <DbTableView :model="nodeProps.data"/>
         </template>
-      </div>
+      </VueFlow>
     </div>
   </main>
 
