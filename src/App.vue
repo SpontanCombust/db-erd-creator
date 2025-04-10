@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import { computed, onUpdated, reactive, ref, useTemplateRef } from 'vue';
-import { ConnectionMode, VueFlow, type Connection, type Edge, type Node } from '@vue-flow/core';
+import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 
 import DbTable from './model/DbTable';
@@ -15,6 +15,7 @@ import DbTableRelation from './model/DbTableRelation';
 import DbTableRelationKind from './model/DbTableRelationKind';
 import DbTableColumn from './model/DbTableColumn';
 import SqlEmitterService from './services/SqlEmitterService';
+import DbTableRelationView from './DbTableRelationView.vue';
 
 
 
@@ -73,7 +74,9 @@ const edges = computed<Edge[]>(() => designerState.relations.map(r => ({
   source: r.connectedFromTable.id,
   sourceHandle: r.connectedFromColumn.id,
   target: r.connectedToTable.id,
-  targetHandle: r.connectedToColumn.id
+  targetHandle: r.connectedToColumn.id,
+  type: 'relation',
+  data: r
 } as Edge)));
 
 
@@ -84,6 +87,24 @@ function onConnectTables(params: Connection) {
     return;
   }
 
+  let relationType: DbTableRelationKind;
+  switch (designerState.toolMode) {
+    case DesignerToolMode.AddRelation11:
+      relationType = DbTableRelationKind.OneToOne;
+      break;
+    case DesignerToolMode.AddRelation1N:
+      relationType = DbTableRelationKind.OneToMany;
+      break;
+    case DesignerToolMode.AddRelationNN:
+      relationType = DbTableRelationKind.ManyToMany;
+      break;
+    case DesignerToolMode.AddRelationInheritance:
+      relationType = DbTableRelationKind.InheritsFrom;
+      break;
+    default:
+      relationType = DbTableRelationKind.OneToOne;
+  }
+
   let srcTable: DbTable | null = null;
   let srcColumn: DbTableColumn | null = null;
   let dstTable: DbTable | null = null;
@@ -91,11 +112,11 @@ function onConnectTables(params: Connection) {
 
   for (const tab of designerState.tables) {
     for (const col of tab.columns) {
-      if (col.id == params.sourceHandle) {
+      if (col.id == params.sourceHandle && col.keyType == 'PK') {
         srcTable = tab;
         srcColumn = col;
       }
-      else if (col.id == params.targetHandle) {
+      else if (col.id == params.targetHandle && col.keyType == 'FK') {
         dstTable = tab;
         dstColumn = col;
       }
@@ -103,7 +124,18 @@ function onConnectTables(params: Connection) {
   }
 
   if (srcTable && srcColumn && dstTable && dstColumn) {
-    designerState.relations.push(new DbTableRelation(srcTable, srcColumn, dstTable, dstColumn, DbTableRelationKind.OneToOne));
+    designerState.relations.push(new DbTableRelation(srcTable, srcColumn, dstTable, dstColumn, relationType));
+  }
+}
+
+function onRelationChange(evs: EdgeChange[]) {
+  for (const ev of evs) {
+    if (ev.type == 'remove') {
+      const relIdx = designerState.relations.findIndex(rel => 
+        rel.connectedFromColumn.id == ev.sourceHandle && rel.connectedToColumn.id == ev.targetHandle
+      );
+      designerState.relations.splice(relIdx, 1);
+    }
   }
 }
 
@@ -148,11 +180,15 @@ function generateSql() {
       <VueFlow :nodes="nodes" :edges="edges" :connection-mode="ConnectionMode.Strict" 
         @pane-click="(ev) => onDesignerClick(ev)"
         @connect="onConnectTables"
+        @edges-change="ev => onRelationChange(ev)"
       >
         <Background pattern-color="#555" :gap="20"/>
 
         <template #node-table="nodeProps">
           <DbTableView :model="nodeProps.data"/>
+        </template>
+        <template #edge-relation="edgeProps">
+          <DbTableRelationView v-bind="edgeProps"/>
         </template>
       </VueFlow>
     </div>
