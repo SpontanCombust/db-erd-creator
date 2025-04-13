@@ -1,25 +1,22 @@
 import { v4 as uuid } from 'uuid';
 
-import type DbTableColumn from "./DbTableColumn";
-
 
 export default class DbTable {
     public readonly id: string;
     public name: string;
-    public columns: DbTableColumn[];
+    public posX: number;
+    public posY: number;
 
-    public designerPosition: { x: number, y: number };
-    // public designerScale: { x: number, y: number };
 
-    constructor(
-        id: string | null,
-        designerPosition: { x: number, y: number },
-        // designerScale: { x: number, y: number }
-    ) {
-        this.id = id ?? uuid();
-        this.name = "NewTable";
-        this.columns = [];
-        this.designerPosition = designerPosition;
-        // this.designerScale = designerScale;
+    constructor(args: {
+        id?: string,
+        name?: string,
+        posX?: number,
+        posY?: number
+    }) {
+        this.id = args.id ?? uuid();
+        this.name = args.name ?? "NewTable";
+        this.posX = args.posX ?? 0;
+        this.posY = args.posY ?? 0;
     }
 }

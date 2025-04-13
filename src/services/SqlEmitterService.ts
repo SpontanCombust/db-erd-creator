@@ -1,33 +1,49 @@
 import type DbTable from "@/model/DbTable";
-import type DbTableRelation from "@/model/DbTableRelation";
+import { useDbTableColumnStore } from "@/stores/DbTableColumnStore";
+import { useDbTableRelationStore } from "@/stores/DbTableRelationStore";
+import { useDbTableStore } from "@/stores/DbTableStore";
+
 
 export default class SqlEmitterService {
-    public emitSql(tables: DbTable[], relations: DbTableRelation[]) : string {
+    public emitSql() : string {
         let sql = '';
 
+        const { tables } = useDbTableStore();
         for (const t of tables) {
-            sql += this.emitCreateTableSql(t, relations) + '\n';
+            sql += this.emitCreateTableSql(t) + '\n';
         }
 
         return sql;
     }
 
-    private emitCreateTableSql(table: DbTable, relations: DbTableRelation[]) : string {
+    private emitCreateTableSql(table: DbTable) : string {
+        const { getTableByKey } = useDbTableStore();
+        const { getColumnsByTableId, getColumnByKey } = useDbTableColumnStore();
+        const { getRelationsByTargetTableId } = useDbTableRelationStore();        
+
+        const columns = getColumnsByTableId(table.id);
+        const relations = getRelationsByTargetTableId(table.id);
+
+
         let sql = `CREATE TABLE "${table.name}" (\n`;
 
         let columnSqls = [];
-        for (const col of table.columns) {
+        for (const col of columns) {
             columnSqls.push(`  ${col.name} ${col.type}`);
         }
         
-        const pk = table.columns.find(c => c.keyType == 'PK');
+        const pk = columns.find(c => c.keyType == 'PK');
         if (pk) {
             columnSqls.push(`  PRIMARY KEY(${pk.name})`);
         }
 
-        const fkRels = relations.filter(r => r.connectedToTable.id == table.id);
-        for (const r of fkRels) {
-            columnSqls.push(`  CONTRAINT FK_${r.connectedToColumn.name} FOREIGN KEY(${r.connectedToColumn.name}) REFERENCES ${r.connectedFromTable.name}(${r.connectedFromColumn.name})`);
+        for (const r of relations) {
+            const sourceTable = getTableByKey(r.sourceTableId);
+            const sourceColumn = getColumnByKey(r.sourceColumnId);
+            const targetColumn = columns.find(c => c.id == r.targetColumnId);
+            if (sourceTable && sourceColumn && targetColumn) {
+                columnSqls.push(`  CONTRAINT FK_${targetColumn.name} FOREIGN KEY(${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+            }
         }
 
         sql += columnSqls.join(',\n');

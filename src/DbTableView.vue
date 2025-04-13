@@ -1,16 +1,18 @@
 <script setup lang="ts">
 
-import { computed, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 
 import DbTableColumnView from './DbTableColumnView.vue';
-import type DbTable from '@/model/DbTable';
+import DbTable from '@/model/DbTable';
 import { useDesignerState } from '@/composables/useDesignerState';
 import DesignerToolMode from '@/model/DesignerToolMode';
 import DbTableColumn from '@/model/DbTableColumn';
+import { useDbTableStore } from './stores/DbTableStore';
+import { useDbTableColumnStore } from './stores/DbTableColumnStore';
 
 
 const props = defineProps<{
-  model: DbTable,
+  tableId: string,
 }>();
 
 const emit = defineEmits<{
@@ -21,11 +23,24 @@ const emit = defineEmits<{
 
 
 const designerState = useDesignerState();
+const { getTableByKey: getTableById, updateTable } = useDbTableStore();
+const { getColumnsByTableId, addColumn } = useDbTableColumnStore();
 
 
-const tableName = ref(props.model.name);
+const model = reactive(function() {
+  const tab = getTableById(props.tableId);
+  if (tab) {
+    return tab;
+  } else {
+    console.error(`Table with ID ${props.tableId} was not found`);
+    return new DbTable({});
+  }
+}());
 
-watch(tableName, (value) => props.model.name = value);
+watch(model, (value) => updateTable(value));
+
+
+const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.id));
 
 
 const relationCreationActive = computed(() => {
@@ -48,19 +63,19 @@ const relationCreationActive = computed(() => {
     :class="{ 
       'table-outline': relationCreationActive
     }"
-    :style="{ left: `${props.model.designerPosition.x}px`, top: `${props.model.designerPosition.y}px` }"
+    :style="{ left: `${model.posX}px`, top: `${model.posY}px` }"
     @mousedown="(ev) => $emit('mousedown', ev)"
     @mouseup="(ev) => $emit('mouseup', ev)"
     @click="(ev) => $emit('click', ev)"
   >
     <div class="table-header">
-      <input type="text" v-model="tableName" placeholder="Table name"/>
+      <input type="text" v-model="model.name" placeholder="Table name"/>
     </div>
     <ul class="table-content">
-      <template v-for="column in props.model.columns">
-        <DbTableColumnView :model="column"/>
+      <template v-for="columnId in columnIds">
+        <DbTableColumnView :columnId="columnId"/>
       </template>
-      <button @click="props.model.columns.push(new DbTableColumn(null))">+</button>
+      <button @click="addColumn(new DbTableColumn({ tableId: model.id }))">+</button>
     </ul>
   </div>
   

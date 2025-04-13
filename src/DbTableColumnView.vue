@@ -1,33 +1,41 @@
 <script setup lang="ts">
 
-import type DbTableColumn from '@/model/DbTableColumn';
+import DbTableColumn from '@/model/DbTableColumn';
 import { Handle, Position } from '@vue-flow/core';
 
-import { ref, watch } from 'vue';
+import { reactive, watch } from 'vue';
+import { useDbTableColumnStore } from './stores/DbTableColumnStore';
 
 
 const props = defineProps<{
-  model: DbTableColumn
+  columnId: string
 }>();
 
 
-const columnName = ref(props.model.name);
-const columnType = ref(props.model.type);
-const keyType = ref<null | "PK" | "FK">(null);
+const { getColumnByKey, updateColumn } = useDbTableColumnStore();
 
-watch(columnName, (value) => props.model.name = value );
-watch(columnType, (value) => props.model.type = value );
-watch(keyType, (value) => props.model.keyType = value );
+
+const model = reactive(function() {
+  const col = getColumnByKey(props.columnId);
+  if (col) {
+    return col;
+  } else {
+    console.error(`Table column with ID ${props.columnId} was not found`);
+    return new DbTableColumn({tableId: ""});
+  }
+}());
+
+watch(model, (value) => updateColumn(value));
 
 
 function switchKeyType() {
-  switch (keyType.value) {
+  switch (model.keyType) {
     case null:
-      keyType.value = "PK"; break;
+      model.keyType = "PK"; break;
     case "PK":
-      keyType.value = "FK"; break;
+      model.keyType = "FK"; break;
     default:
-      keyType.value = null;
+      model.keyType = null;
   }
 }
 
@@ -37,17 +45,17 @@ function switchKeyType() {
 <template>
   
 <li class="table-column nodrag">
-  <Handle :id="props.model.id" :style="{ opacity: model.keyType == 'FK' ? 1 : 0 }" type="target" :position="Position.Left"/>
+  <Handle :id="model.id" :style="{ opacity: model.keyType == 'FK' ? 1 : 0 }" type="target" :position="Position.Left"/>
   <div class="table-column-key" @click="switchKeyType">
     {{ model.keyType }}
   </div>
   <span>
-    <input type="text" v-model="columnName" placeholder="Column name"/>
+    <input type="text" v-model="model.name" placeholder="Column name"/>
   </span>
   <span>
-    <input type="text" v-model="columnType" placeholder="Column type"/>
+    <input type="text" v-model="model.type" placeholder="Column type"/>
   </span>
-  <Handle :id="props.model.id" :style="{ opacity: model.keyType == 'PK' ? 1 : 0 }" type="source" :position="Position.Right"/>
+  <Handle :id="model.id" :style="{ opacity: model.keyType == 'PK' ? 1 : 0 }" type="source" :position="Position.Right"/>
 </li>
   
 </template>

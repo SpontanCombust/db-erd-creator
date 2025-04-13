@@ -16,6 +16,9 @@ import DbTableRelationKind from './model/DbTableRelationKind';
 import DbTableColumn from './model/DbTableColumn';
 import SqlEmitterService from './services/SqlEmitterService';
 import DbTableRelationView from './DbTableRelationView.vue';
+import { useDbTableStore } from './stores/DbTableStore';
+import { useDbTableRelationStore } from './stores/DbTableRelationStore';
+import { useDbTableColumnStore } from './stores/DbTableColumnStore';
 
 
 
@@ -62,79 +65,79 @@ function onTableClick(ev: MouseEvent, tab: DbTable) {
 }
 
 
-const nodes = computed<Node[]>(() => designerState.tables.map(t => ({
+const { tables } = useDbTableStore();
+const { relations, addRelation, removeRelation } = useDbTableRelationStore();
+const { getColumnByKey: getColumnById } = useDbTableColumnStore();
+
+const nodes = computed<Node[]>(() => tables.map(t => ({
   id: t.id,
-  position: t.designerPosition,
+  position: { x: t.posX, y: t.posY },
   type: 'table',
-  data: t,
+  data: t.id,
 } as Node)));
 
-const edges = computed<Edge[]>(() => designerState.relations.map(r => ({
-  id: r.connectedFromColumn.id + '--' + r.connectedToColumn.id,
-  source: r.connectedFromTable.id,
-  sourceHandle: r.connectedFromColumn.id,
-  target: r.connectedToTable.id,
-  targetHandle: r.connectedToColumn.id,
+const edges = computed<Edge[]>(() => relations.map(r => ({
+  id: r.sourceColumnId + '--' + r.targetColumnId,
+  source: r.sourceTableId,
+  sourceHandle: r.sourceColumnId,
+  target: r.targetTableId,
+  targetHandle: r.targetColumnId,
   type: 'relation',
   data: r
 } as Edge)));
 
 
-function onConnectTables(params: Connection) {
-  if (!params.sourceHandle || !params.targetHandle // make sure handles are valid
-    || params.source == params.target // make sure you cannot connect table to itself
+function onConnectTables(conn: Connection) {
+  if (!conn.sourceHandle || !conn.targetHandle // make sure handles are valid
+    || conn.source == conn.target // make sure you cannot connect table to itself
   ) {
     return;
   }
 
-  let relationType: DbTableRelationKind;
+  let relationKind: DbTableRelationKind;
   switch (designerState.toolMode) {
     case DesignerToolMode.AddRelation11:
-      relationType = DbTableRelationKind.OneToOne;
+      relationKind = DbTableRelationKind.OneToOne;
       break;
     case DesignerToolMode.AddRelation1N:
-      relationType = DbTableRelationKind.OneToMany;
+      relationKind = DbTableRelationKind.OneToMany;
       break;
     case DesignerToolMode.AddRelationNN:
-      relationType = DbTableRelationKind.ManyToMany;
+      relationKind = DbTableRelationKind.ManyToMany;
       break;
     case DesignerToolMode.AddRelationInheritance:
-      relationType = DbTableRelationKind.InheritsFrom;
+      relationKind = DbTableRelationKind.InheritsFrom;
       break;
     default:
-      relationType = DbTableRelationKind.OneToOne;
+      relationKind = DbTableRelationKind.OneToOne;
   }
 
-  let srcTable: DbTable | null = null;
-  let srcColumn: DbTableColumn | null = null;
-  let dstTable: DbTable | null = null;
-  let dstColumn: DbTableColumn | null = null;
+  const sourceColumn = getColumnById(conn.sourceHandle);
+  const targetColumn = getColumnById(conn.targetHandle);
 
-  for (const tab of designerState.tables) {
-    for (const col of tab.columns) {
-      if (col.id == params.sourceHandle && col.keyType == 'PK') {
-        srcTable = tab;
-        srcColumn = col;
-      }
-      else if (col.id == params.targetHandle && col.keyType == 'FK') {
-        dstTable = tab;
-        dstColumn = col;
-      }
-    }
-  }
-
-  if (srcTable && srcColumn && dstTable && dstColumn) {
-    designerState.relations.push(new DbTableRelation(srcTable, srcColumn, dstTable, dstColumn, relationType));
+  if (sourceColumn && targetColumn
+    && sourceColumn.keyType == 'PK'
+    && targetColumn.keyType == 'FK'
+  ) {
+    const rel = new DbTableRelation({ 
+      sourceTableId: sourceColumn.tableId,
+      sourceColumnId: sourceColumn.id,
+      targetTableId: targetColumn.tableId,
+      targetColumnId: targetColumn.id,
+      kind: relationKind
+    });
+    addRelation(rel);
   }
 }
 
 function onRelationChange(evs: EdgeChange[]) {
   for (const ev of evs) {
-    if (ev.type == 'remove') {
-      const relIdx = designerState.relations.findIndex(rel => 
-        rel.connectedFromColumn.id == ev.sourceHandle && rel.connectedToColumn.id == ev.targetHandle
-      );
-      designerState.relations.splice(relIdx, 1);
+    switch (ev.type) {
+      case 'remove': 
+        if (ev.sourceHandle && ev.targetHandle) {
+          removeRelation(ev.sourceHandle, ev.targetHandle);
+        }
+        break;
     }
   }
 }
@@ -144,7 +147,7 @@ const generatedSql = ref('');
 
 function generateSql() {
   const svc = new SqlEmitterService();
-  generatedSql.value = svc.emitSql(designerState.tables, designerState.relations);
+  generatedSql.value = svc.emitSql();
 }
 
 
@@ -185,7 +188,7 @@ function generateSql() {
         <Background pattern-color="#555" :gap="20"/>
 
         <template #node-table="nodeProps">
-          <DbTableView :model="nodeProps.data"/>
+          <DbTableView :table-id="nodeProps.data"/>
         </template>
         <template #edge-relation="edgeProps">
           <DbTableRelationView v-bind="edgeProps"/>

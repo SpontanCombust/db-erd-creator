@@ -28,8 +28,8 @@ function onDragEnd() {
 function onDragMove(ev: MouseEvent) {
   if (draggedTable) {
     // mouse can move outside of the table element during dragging, so using `offsetX/Y` is not ideal here
-    draggedTable.designerPosition.x = ev.clientX - designerState.clientX - draggingOffsetPx;
-    draggedTable.designerPosition.y = ev.clientY - designerState.clientY - draggingOffsetPy;
+    // draggedTable.designerPosition.x = ev.clientX - designerState.clientX - draggingOffsetPx;
+    // draggedTable.designerPosition.y = ev.clientY - designerState.clientY - draggingOffsetPy;
   }
 }
 
