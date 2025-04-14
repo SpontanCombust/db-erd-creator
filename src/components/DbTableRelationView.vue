@@ -4,8 +4,8 @@ import { computed } from 'vue';
 import type { EdgeProps } from '@vue-flow/core';
 import { SmoothStepEdge } from '@vue-flow/core';
 
-import type DbTableRelation from './model/DbTableRelation';
-import DbTableRelationKind from './model/DbTableRelationKind';
+import type DbTableRelation from '../model/DbTableRelation';
+import DbTableRelationKind from '../model/DbTableRelationKind';
 import DbTableRelationMarker from './DbTableRelationMarker.vue';
 
 

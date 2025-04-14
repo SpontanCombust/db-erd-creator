@@ -1,4 +1,4 @@
-import type DbTable from "./model/DbTable";
+import type DbTable from "../model/DbTable";
 
 
 export default interface DesignerToolExports {

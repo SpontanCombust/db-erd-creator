@@ -1,54 +1,176 @@
 import type DbTable from "@/model/DbTable";
+import type DbTableColumn from "@/model/DbTableColumn";
 import { useDbTableColumnStore } from "@/stores/DbTableColumnStore";
 import { useDbTableRelationStore } from "@/stores/DbTableRelationStore";
 import { useDbTableStore } from "@/stores/DbTableStore";
 
 
 export default class SqlEmitterService {
-    public emitSql() : string {
-        let sql = '';
+    private sqliteEmitter = new SQLiteEmitter();
+
+    public emitSql() : string[] {
+        const sql = [this.sqliteEmitter.emitPreambleSql()];
 
         const { tables } = useDbTableStore();
         for (const t of tables) {
-            sql += this.emitCreateTableSql(t) + '\n';
+            sql.push(this.sqliteEmitter.emitCreateTableSql(t));
         }
 
         return sql;
     }
+}
 
-    private emitCreateTableSql(table: DbTable) : string {
+
+
+interface SqlEmitter {
+    emitPreambleSql() : string;
+    emitCreateTableSql(table: DbTable) : string;
+}
+
+
+abstract class CommonSqlEmmitter implements SqlEmitter {
+    public emitPreambleSql(): string {
+        return '';
+    }
+
+    public emitCreateTableSql(table: DbTable) : string {
+        let sql = this.createTableStart(table);
+        sql += this.createTableDefinitions(table).join(",\n");
+        sql += this.createTableEnd(table);
+
+        return sql;
+    }
+
+
+    protected createTableStart(table: DbTable) : string {
+        return `CREATE TABLE "${table.name}" (\n`;
+    }
+
+    protected createTableEnd(table: DbTable) : string {
+        return '\n);';   
+    }
+
+    protected createTableDefinitions(table: DbTable) : string[] {
+        const { getColumnsByTableId } = useDbTableColumnStore();
+
+        const columns = getColumnsByTableId(table.id);
+
+        const defs = [];
+        for (const col of columns) {
+            defs.push(this.createTableColumnDefinition(col));
+        }
+        return defs;
+    }
+
+    protected createTableColumnDefinition(column: DbTableColumn) : string {
+        let colSql = `  ${column.name} ${column.type}`;
+        if (column.keyType == 'PK') {
+            colSql += ' PRIMARY KEY';
+        }
+        return colSql;
+    }
+}
+
+
+class SQLiteEmitter extends CommonSqlEmmitter {
+    public override emitPreambleSql(): string {
+        return "PRAGMA foreign_keys = ON;";
+    }
+
+    protected override createTableDefinitions(table: DbTable): string[] {
         const { getTableByKey } = useDbTableStore();
         const { getColumnsByTableId, getColumnByKey } = useDbTableColumnStore();
         const { getRelationsByTargetTableId } = useDbTableRelationStore();        
 
+        const defs = super.createTableDefinitions(table);
+
         const columns = getColumnsByTableId(table.id);
         const relations = getRelationsByTargetTableId(table.id);
-
-
-        let sql = `CREATE TABLE "${table.name}" (\n`;
-
-        let columnSqls = [];
-        for (const col of columns) {
-            columnSqls.push(`  ${col.name} ${col.type}`);
-        }
-        
-        const pk = columns.find(c => c.keyType == 'PK');
-        if (pk) {
-            columnSqls.push(`  PRIMARY KEY(${pk.name})`);
-        }
 
         for (const r of relations) {
             const sourceTable = getTableByKey(r.sourceTableId);
             const sourceColumn = getColumnByKey(r.sourceColumnId);
             const targetColumn = columns.find(c => c.id == r.targetColumnId);
             if (sourceTable && sourceColumn && targetColumn) {
-                columnSqls.push(`  CONTRAINT FK_${targetColumn.name} FOREIGN KEY(${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+                defs.push(`  FOREIGN KEY (${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
             }
         }
 
-        sql += columnSqls.join(',\n');
-        sql += '\n);';
+        return defs;
+    }
+}
 
-        return sql;
+class MySqlEmitter extends CommonSqlEmmitter {
+    protected override createTableEnd(table: DbTable): string {
+        return ") ENGINE=InnoDB;";
+    }
+
+    protected override createTableDefinitions(table: DbTable): string[] {
+        const { getTableByKey } = useDbTableStore();
+        const { getColumnsByTableId, getColumnByKey } = useDbTableColumnStore();
+        const { getRelationsByTargetTableId } = useDbTableRelationStore();        
+
+        const defs = super.createTableDefinitions(table);
+
+        const columns = getColumnsByTableId(table.id);
+        const relations = getRelationsByTargetTableId(table.id);
+
+        for (const r of relations) {
+            const sourceTable = getTableByKey(r.sourceTableId);
+            const sourceColumn = getColumnByKey(r.sourceColumnId);
+            const targetColumn = columns.find(c => c.id == r.targetColumnId);
+            if (sourceTable && sourceColumn && targetColumn) {
+                defs.push(`  FOREIGN KEY (${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+            }
+        }
+
+        return defs;
+    }
+}
+
+class PostgreSqlEmitter extends CommonSqlEmmitter {
+    protected override createTableDefinitions(table: DbTable): string[] {
+        const { getTableByKey } = useDbTableStore();
+        const { getColumnsByTableId, getColumnByKey } = useDbTableColumnStore();
+        const { getRelationsByTargetTableId } = useDbTableRelationStore();        
+
+        const defs = super.createTableDefinitions(table);
+
+        const columns = getColumnsByTableId(table.id);
+        const relations = getRelationsByTargetTableId(table.id);
+
+        for (const r of relations) {
+            const sourceTable = getTableByKey(r.sourceTableId);
+            const sourceColumn = getColumnByKey(r.sourceColumnId);
+            const targetColumn = columns.find(c => c.id == r.targetColumnId);
+            if (sourceTable && sourceColumn && targetColumn) {
+                defs.push(`  CONSTRAINT FK_${targetColumn.name} FOREIGN KEY (${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+            }
+        }
+
+        return defs;
+    }
+}
+
+class SqlServerEmitter extends CommonSqlEmmitter {
+    protected override createTableColumnDefinition(column: DbTableColumn): string {
+        const { getTableByKey } = useDbTableStore();
+        const { getColumnByKey } = useDbTableColumnStore();
+        const { getRelationsByTargetTableId } = useDbTableRelationStore();
+
+        let colSql = super.createTableColumnDefinition(column);
+
+        const relations = getRelationsByTargetTableId(column.tableId);
+        const r = relations.find(r => r.targetColumnId == column.id);
+        if (r) {
+            const sourceTable = getTableByKey(r.sourceTableId);
+            const sourceColumn = getColumnByKey(r.sourceColumnId);
+
+            if (sourceTable && sourceColumn) {
+                colSql += ` FOREIGN KEY REFERENCES ${sourceTable.name}(${sourceColumn.name})`;
+            }
+        }
+
+        return colSql;
     }
 }

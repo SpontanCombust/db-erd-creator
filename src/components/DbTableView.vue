@@ -7,8 +7,8 @@ import DbTable from '@/model/DbTable';
 import { useDesignerState } from '@/composables/useDesignerState';
 import DesignerToolMode from '@/model/DesignerToolMode';
 import DbTableColumn from '@/model/DbTableColumn';
-import { useDbTableStore } from './stores/DbTableStore';
-import { useDbTableColumnStore } from './stores/DbTableColumnStore';
+import { useDbTableStore } from '../stores/DbTableStore';
+import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
 
 
 const props = defineProps<{

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 
-import { useDesignerState } from './composables/useDesignerState';
+import { useDesignerState } from '../composables/useDesignerState';
 import type DesignerToolExports from './DesignerToolExports';
-import DbTable from './model/DbTable';
-import DesignerToolMode from './model/DesignerToolMode';
-import { useDbTableStore } from './stores/DbTableStore';
+import DbTable from '../model/DbTable';
+import DesignerToolMode from '../model/DesignerToolMode';
+import { useDbTableStore } from '../stores/DbTableStore';
 
 
 const designerState = useDesignerState();

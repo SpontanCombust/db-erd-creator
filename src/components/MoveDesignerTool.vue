@@ -1,8 +1,8 @@
 <script setup lang="ts">
 
-import { useDesignerState } from './composables/useDesignerState';
+import { useDesignerState } from '../composables/useDesignerState';
 import type DesignerToolExports from './DesignerToolExports';
-import type DbTable from './model/DbTable';
+import type DbTable from '../model/DbTable';
 
 
 const designerState = useDesignerState();

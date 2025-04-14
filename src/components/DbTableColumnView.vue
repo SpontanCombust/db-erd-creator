@@ -4,7 +4,7 @@ import DbTableColumn from '@/model/DbTableColumn';
 import { Handle, Position } from '@vue-flow/core';
 
 import { reactive, watch } from 'vue';
-import { useDbTableColumnStore } from './stores/DbTableColumnStore';
+import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
 
 
 const props = defineProps<{
