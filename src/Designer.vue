@@ -156,8 +156,8 @@ function onNodeChange(evs: NodeChange[]) {
 }
 
 
-const generatedSql = ref<string[]>([]);
-const generatedSqlText = computed(() => generatedSql.value.join("\n"));
+const generatedSql = ref<{ subject: string, sql: string }[]>([]);
+const generatedSqlText = computed(() => generatedSql.value.map(stmt => stmt.sql).join("\n\n"));
 
 function generateSql() {
   const svc = new SqlEmitterService();
@@ -167,13 +167,15 @@ function generateSql() {
 const sqlCommitResult = ref('');
 
 async function commitSql() {
-  try {
-    for (const sql of generatedSql.value) {
-      const result = await executeDbQuery(sql);
-      sqlCommitResult.value = result;
+  for (const stmt of generatedSql.value.filter(stmt => stmt.sql.length > 0)) {
+    sqlCommitResult.value += stmt.subject + ':\n';
+    try {
+      const result = await executeDbQuery(stmt.sql);
+      sqlCommitResult.value += result + '\n';
+    } catch (err: any) {
+      sqlCommitResult.value += err + '\n';
     }
-  } catch (err: any) {
-    sqlCommitResult.value = err;
+    sqlCommitResult.value += '\n';
   }
 }
 
@@ -202,7 +204,7 @@ async function commitSql() {
 
     <div id="designer-output" v-if="generatedSqlText">
       <textarea>{{ generatedSqlText }}</textarea>
-      <p :style="{ color: 'orange' }">{{ sqlCommitResult }}</p>
+      <textarea :style="{ color: 'orange' }">{{ sqlCommitResult }}</textarea>
       <button @click="generatedSql = []; sqlCommitResult = ''">Close</button>
       <button @click="commitSql">Commit</button>
     </div>

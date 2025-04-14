@@ -111,13 +111,17 @@ async function tryConnecting() {
         <input type="password" v-model="formPassword"/>
       </label>
     </template>
+    
+    <p :style="{ color: 'red' }">{{ connectionError }}</p>
+    <button @click="tryConnecting">Connect</button>
   </form>
-  <p :style="{ color: 'red' }">{{ connectionError }}</p>
-  <button @click="tryConnecting">Connect</button>
 </template>
 
 
 <style scoped>
+  form {
+    padding: 3%;
+  }
   label {
     display: block;
   }

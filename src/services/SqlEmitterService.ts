@@ -10,17 +10,25 @@ import { useDbTableStore } from "@/stores/DbTableStore";
 export default class SqlEmitterService {
     private emitter: SqlEmitter = new SQLiteEmitter();
 
-    public emitSql() : string[] {
+    public emitSql() : { subject: string, sql: string }[] {
         this.setupEmitter();
 
-        const sql = [this.emitter.emitPreambleSql()];
-
+        const statements = [];
+        
+        statements.push({
+            subject: 'Preamble',
+            sql: this.emitter.emitPreambleSql()
+        });
+        
         const { tables } = useDbTableStore();
         for (const t of tables) {
-            sql.push(this.emitter.emitCreateTableSql(t));
+            statements.push({
+                subject: 'Table '+ t.name,
+                sql: this.emitter.emitCreateTableSql(t)
+            });
         }
 
-        return sql.filter(stmt => stmt.length > 0);
+        return statements;
     }
 
     private setupEmitter() {
