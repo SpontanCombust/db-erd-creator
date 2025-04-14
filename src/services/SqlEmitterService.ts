@@ -1,22 +1,47 @@
 import type DbTable from "@/model/DbTable";
 import type DbTableColumn from "@/model/DbTableColumn";
+import { SupportedDbKind } from "@/model/SupportedDbKind";
+import { useDbConnectionStore } from "@/stores/DbConnectionStore";
 import { useDbTableColumnStore } from "@/stores/DbTableColumnStore";
 import { useDbTableRelationStore } from "@/stores/DbTableRelationStore";
 import { useDbTableStore } from "@/stores/DbTableStore";
 
 
 export default class SqlEmitterService {
-    private sqliteEmitter = new SQLiteEmitter();
+    private emitter: SqlEmitter = new SQLiteEmitter();
 
     public emitSql() : string[] {
-        const sql = [this.sqliteEmitter.emitPreambleSql()];
+        this.setupEmitter();
+
+        const sql = [this.emitter.emitPreambleSql()];
 
         const { tables } = useDbTableStore();
         for (const t of tables) {
-            sql.push(this.sqliteEmitter.emitCreateTableSql(t));
+            sql.push(this.emitter.emitCreateTableSql(t));
         }
 
-        return sql;
+        return sql.filter(stmt => stmt.length > 0);
+    }
+
+    private setupEmitter() {
+        const { dbKind } = useDbConnectionStore();
+
+        switch (dbKind) {
+            case SupportedDbKind.SQLite:
+                this.emitter = new SQLiteEmitter();
+                break;
+            case SupportedDbKind.PostgreSQL:
+                this.emitter = new PostgreSqlEmitter();
+                break;
+            case SupportedDbKind.MySQL:
+                this.emitter = new MySqlEmitter();
+                break;
+            case SupportedDbKind.SQLServer:
+                this.emitter = new SqlServerEmitter();
+                break;
+            default:
+                this.emitter = new SQLiteEmitter();
+        }
     }
 }
 
@@ -92,7 +117,7 @@ class SQLiteEmitter extends CommonSqlEmmitter {
             const sourceColumn = getColumnByKey(r.sourceColumnId);
             const targetColumn = columns.find(c => c.id == r.targetColumnId);
             if (sourceTable && sourceColumn && targetColumn) {
-                defs.push(`  FOREIGN KEY (${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+                defs.push(`  FOREIGN KEY (${targetColumn.name}) REFERENCES "${sourceTable.name}"(${sourceColumn.name})`);
             }
         }
 
@@ -120,7 +145,7 @@ class MySqlEmitter extends CommonSqlEmmitter {
             const sourceColumn = getColumnByKey(r.sourceColumnId);
             const targetColumn = columns.find(c => c.id == r.targetColumnId);
             if (sourceTable && sourceColumn && targetColumn) {
-                defs.push(`  FOREIGN KEY (${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+                defs.push(`  FOREIGN KEY (${targetColumn.name}) REFERENCES "${sourceTable.name}"(${sourceColumn.name})`);
             }
         }
 
@@ -144,7 +169,7 @@ class PostgreSqlEmitter extends CommonSqlEmmitter {
             const sourceColumn = getColumnByKey(r.sourceColumnId);
             const targetColumn = columns.find(c => c.id == r.targetColumnId);
             if (sourceTable && sourceColumn && targetColumn) {
-                defs.push(`  CONSTRAINT FK_${targetColumn.name} FOREIGN KEY (${targetColumn.name}) REFERENCES ${sourceTable.name}(${sourceColumn.name})`);
+                defs.push(`  CONSTRAINT FK_${targetColumn.name} FOREIGN KEY (${targetColumn.name}) REFERENCES "${sourceTable.name}"(${sourceColumn.name})`);
             }
         }
 
@@ -167,7 +192,7 @@ class SqlServerEmitter extends CommonSqlEmmitter {
             const sourceColumn = getColumnByKey(r.sourceColumnId);
 
             if (sourceTable && sourceColumn) {
-                colSql += ` FOREIGN KEY REFERENCES ${sourceTable.name}(${sourceColumn.name})`;
+                colSql += ` FOREIGN KEY REFERENCES "${sourceTable.name}"(${sourceColumn.name})`;
             }
         }
 

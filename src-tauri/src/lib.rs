@@ -4,7 +4,7 @@ use tauri::async_runtime::Mutex;
 
 struct Database {
   env: Environment,
-  conn: Box<dyn DatabaseConnection + Send>
+  conn: Box<dyn DatabaseConnectionDescriptor + Send>
 }
 
 impl Database {
@@ -55,19 +55,35 @@ impl Database {
 
 
 
-trait DatabaseConnection {
+trait DatabaseConnectionDescriptor {
   fn connection_string(&self) -> String;
 }
 
 
-struct SqliteDatabaseConnection {
+struct SqliteConnectionDescriptor {
   driver: String,
   db_path: String
 }
 
-impl DatabaseConnection for SqliteDatabaseConnection {
+impl DatabaseConnectionDescriptor for SqliteConnectionDescriptor {
     fn connection_string(&self) -> String {
       format!("Driver={{{}}};Database={};", self.driver, self.db_path)
+    }
+}
+
+
+struct PostgreSqlConnectionDescriptor {
+  driver: String,
+  server: String,
+  port: u16,
+  database: String,
+  uid: String,
+  pwd: String
+}
+
+impl DatabaseConnectionDescriptor for PostgreSqlConnectionDescriptor {
+    fn connection_string(&self) -> String {
+      format!("Driver={{{}}};Server={};Port={};Database={};Uid={};Pwd={};", self.driver, self.server, self.port, self.database, self.uid, self.pwd)
     }
 }
 
@@ -89,10 +105,24 @@ impl AppState {
     Ok(driver_names)
   }
 
-  pub fn db_connect_sqlite(&mut self, driver: &str, db_path: &str) -> anyhow::Result<()> {
-    let conn = SqliteDatabaseConnection {
-      driver: driver.to_owned(),
-      db_path: db_path.to_owned()
+  pub fn db_connect_sqlite(&mut self, driver: String, db_path: String) -> anyhow::Result<()> {
+    let conn = SqliteConnectionDescriptor {
+      driver,
+      db_path
+    };
+    self.db_connect(conn)?;
+
+    Ok(())
+  }
+
+  pub fn db_connect_postgresql(&mut self, driver: String, server: String, port: u16, database: String, uid: String, pwd: String) -> anyhow::Result<()> {
+    let conn = PostgreSqlConnectionDescriptor {
+      driver,
+      server,
+      port,
+      database,
+      uid,
+      pwd
     };
     self.db_connect(conn)?;
 
@@ -114,8 +144,13 @@ impl AppState {
       .execute(query)
   }
 
+  pub fn db_disconnect(&mut self) -> anyhow::Result<()> {
+    self.db = None;
+    Ok(())
+  }
 
-  fn db_connect<C: DatabaseConnection + Send + 'static>(&mut self, conn: C) -> anyhow::Result<()> {
+
+  fn db_connect<C: DatabaseConnectionDescriptor + Send + 'static>(&mut self, conn: C) -> anyhow::Result<()> {
     let env = Environment::new()?;
     let db = Database {
       env,
@@ -137,9 +172,27 @@ async fn odbc_drivers() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn db_connect_sqlite(driver: String, db_path: String, app: tauri::State<'_, Mutex<AppState>>) -> Result<(), String> {
+async fn db_connect_sqlite(
+  app: tauri::State<'_, Mutex<AppState>>,
+  driver: String, 
+  db_path: String, 
+) -> Result<(), String> {
   let mut app_lock = app.lock().await;
-  app_lock.db_connect_sqlite(&driver, &db_path).map_err(|e| e.to_string())
+  app_lock.db_connect_sqlite(driver, db_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_connect_postgresql(
+  app: tauri::State<'_, Mutex<AppState>>, 
+  driver: String, 
+  server: String, 
+  port: u16, 
+  database: String,
+  uid: String, 
+  pwd: String
+) -> Result<(), String> {
+  let mut app_lock = app.lock().await;
+  app_lock.db_connect_postgresql(driver, server, port, database, uid, pwd).map_err(|e| e.to_string())
 }
 
 // TODO replace with function returning metadata (like DB kind)
@@ -153,6 +206,12 @@ async fn db_connected(app: tauri::State<'_, Mutex<AppState>>) -> Result<bool, St
 async fn db_execute(query: String, app: tauri::State<'_, Mutex<AppState>>) -> Result<String, String> {
   let app_lock = app.lock().await;
   app_lock.db_execute(&query).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_disconnect(app: tauri::State<'_, Mutex<AppState>>) -> Result<(), String> {
+  let mut app_lock = app.lock().await;
+  app_lock.db_disconnect().map_err(|e| e.to_string())
 }
 
 
@@ -173,8 +232,10 @@ pub fn run() {
     .invoke_handler(tauri::generate_handler![
       odbc_drivers,
       db_connect_sqlite,
+      db_connect_postgresql,
       db_connected,
-      db_execute
+      db_execute,
+      db_disconnect
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

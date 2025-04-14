@@ -19,7 +19,10 @@ import { useDbTableStore } from './stores/DbTableStore';
 import { useDbTableRelationStore } from './stores/DbTableRelationStore';
 import { useDbTableColumnStore } from './stores/DbTableColumnStore';
 import { executeDbQuery } from './api/tauri';
+import { useDbConnectionStore } from './stores/DbConnectionStore';
 
+
+const { dbName } = useDbConnectionStore();
 
 
 const designerRef = useTemplateRef('designer');
@@ -181,6 +184,9 @@ async function commitSql() {
 <template>
   <div ref="designer" id="designer">
     <div id="designer-toolbox">
+      <div>
+        <h2>{{ dbName }}</h2><a href="#/disconnect">Logout</a>
+      </div>
       <button @click="designerState.toolMode = DesignerToolMode.Move">Move</button>
       <button @click="designerState.toolMode = DesignerToolMode.AddTable">Add table</button>
       <button @click="designerState.toolMode = DesignerToolMode.AddRelation11">Add 1-1 relation</button>
@@ -197,7 +203,7 @@ async function commitSql() {
     <div id="designer-output" v-if="generatedSqlText">
       <textarea>{{ generatedSqlText }}</textarea>
       <p :style="{ color: 'orange' }">{{ sqlCommitResult }}</p>
-      <button @click="generatedSqlText = ''">Close</button>
+      <button @click="generatedSql = []; sqlCommitResult = ''">Close</button>
       <button @click="commitSql">Commit</button>
     </div>
 

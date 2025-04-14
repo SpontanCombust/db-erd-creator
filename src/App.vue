@@ -5,12 +5,14 @@ import Home from './Home.vue';
 import Connect from './Connect.vue';
 import Designer from './Designer.vue';
 import NotFound from './NotFound.vue';
+import Disconnect from './Disconnect.vue';
 
 
 const routes = {
   '/': Home,
   '/connect': Connect,
-  '/designer': Designer
+  '/designer': Designer,
+  '/disconnect': Disconnect
 };
 
 const currentPath = ref(window.location.hash);
