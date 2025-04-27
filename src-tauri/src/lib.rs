@@ -88,6 +88,38 @@ impl DatabaseConnectionDescriptor for PostgreSqlConnectionDescriptor {
 }
 
 
+struct MySqlConnectionDescriptor {
+  driver: String,
+  server: String,
+  port: u16,
+  database: String,
+  user: String,
+  password: String
+}
+
+impl DatabaseConnectionDescriptor for MySqlConnectionDescriptor {
+    fn connection_string(&self) -> String {
+      format!("Driver={{{}}};Server={};Port={};Database={};User={};Password={};", self.driver, self.server, self.port, self.database, self.user, self.password)
+    }
+}
+
+
+struct SqlServerConnectionDescriptor {
+  driver: String,
+  server: String,
+  port: u16,
+  database: String,
+  uid: String,
+  pwd: String
+}
+
+impl DatabaseConnectionDescriptor for SqlServerConnectionDescriptor {
+    fn connection_string(&self) -> String {
+      format!("Driver={{{}}};Server={};Port={};Database={};UID={};PWD={}; Trusted_Connection=yes;", self.driver, self.server, self.port, self.database, self.uid, self.pwd)
+    }
+}
+
+
 
 
 #[derive(Default)]
@@ -117,6 +149,34 @@ impl AppState {
 
   pub fn db_connect_postgresql(&mut self, driver: String, server: String, port: u16, database: String, uid: String, pwd: String) -> anyhow::Result<()> {
     let conn = PostgreSqlConnectionDescriptor {
+      driver,
+      server,
+      port,
+      database,
+      uid,
+      pwd
+    };
+    self.db_connect(conn)?;
+
+    Ok(())
+  }
+
+  pub fn db_connect_mysql(&mut self, driver: String, server: String, port: u16, database: String, user: String, password: String) -> anyhow::Result<()> {
+    let conn = MySqlConnectionDescriptor {
+      driver,
+      server,
+      port,
+      database,
+      user,
+      password
+    };
+    self.db_connect(conn)?;
+
+    Ok(())
+  }
+
+  pub fn db_connect_sqlserver(&mut self, driver: String, server: String, port: u16, database: String, uid: String, pwd: String) -> anyhow::Result<()> {
+    let conn = SqlServerConnectionDescriptor {
       driver,
       server,
       port,
@@ -195,6 +255,34 @@ async fn db_connect_postgresql(
   app_lock.db_connect_postgresql(driver, server, port, database, uid, pwd).map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+async fn db_connect_mysql(
+  app: tauri::State<'_, Mutex<AppState>>, 
+  driver: String, 
+  server: String, 
+  port: u16, 
+  database: String,
+  user: String, 
+  password: String
+) -> Result<(), String> {
+  let mut app_lock = app.lock().await;
+  app_lock.db_connect_mysql(driver, server, port, database, user, password).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn db_connect_sqlserver(
+  app: tauri::State<'_, Mutex<AppState>>, 
+  driver: String, 
+  server: String, 
+  port: u16, 
+  database: String,
+  uid: String, 
+  pwd: String
+) -> Result<(), String> {
+  let mut app_lock = app.lock().await;
+  app_lock.db_connect_sqlserver(driver, server, port, database, uid, pwd).map_err(|e| e.to_string())
+}
+
 // TODO replace with function returning metadata (like DB kind)
 #[tauri::command]
 async fn db_connected(app: tauri::State<'_, Mutex<AppState>>) -> Result<bool, String> {
@@ -233,6 +321,8 @@ pub fn run() {
       odbc_drivers,
       db_connect_sqlite,
       db_connect_postgresql,
+      db_connect_mysql,
+      db_connect_sqlserver,
       db_connected,
       db_execute,
       db_disconnect

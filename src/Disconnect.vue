@@ -8,7 +8,7 @@ onMounted(async () => {
 
   setTimeout(() => {
     window.location.hash = '#/';
-  }, 1000);
+  }, 500);
 });
 
 </script>
