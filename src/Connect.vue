@@ -2,9 +2,10 @@
 
 import { computed, onMounted, ref, watch } from 'vue';
 
-import { connectToPostgreSqlDb, connectToSqliteDb, listOdbcDrivers } from './api/tauri';
+import { connectToDb, listOdbcDrivers } from './api/tauri';
 import { defaultDbPort, filterSupportedDbKinds, readSupportedDbKind, SupportedDbKind } from './model/SupportedDbKind';
 import { useDbConnectionStore } from './stores/DbConnectionStore';
+import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
 
 
 const availableDrivers = ref<string[]>([]);
@@ -50,21 +51,30 @@ async function tryConnecting() {
       return;
     }
 
+    const connStringFactory = new OdbcConnectionStringFactory();
+    let connString = '';
+
     switch (selectedDbKind.value) {
       case SupportedDbKind.SQLite:
-        await connectToSqliteDb(selectedDriver.value, formDatabase.value);
+        connString = connStringFactory.sqlite(selectedDriver.value, formDatabase.value);
         break;
       case SupportedDbKind.PostgreSQL:
-        await connectToPostgreSqlDb(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value);
+        connString = connStringFactory.postgresql(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value);
         break;
       case SupportedDbKind.MySQL:
-        throw new Error("Not implemented");
+        connString = connStringFactory.mysql(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value)
+        break;
       case SupportedDbKind.SQLServer:
-        throw new Error("Not implemented");
+        connString = connStringFactory.sqlserver(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value)
+        break;
     }
 
-    storeConnection(selectedDriver.value, selectedDbKind.value, formDatabase.value);
-    window.location.hash = '#/designer';
+    if (connString != '') {
+      await connectToDb(connString);
+      storeConnection(selectedDriver.value, selectedDbKind.value, formDatabase.value);
+  
+      window.location.hash = '#/designer';
+    }
   } catch (err: any) {
     connectionError.value = err;
   }

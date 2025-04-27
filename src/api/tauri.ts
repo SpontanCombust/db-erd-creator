@@ -5,20 +5,8 @@ export async function listOdbcDrivers() : Promise<string[]> {
     return await invoke<string[]>('odbc_drivers').then(drivers => drivers.sort());
 }
 
-export async function connectToSqliteDb(driver: string, dbPath: string) : Promise<void> {
-    return await invoke('db_connect_sqlite', { driver, dbPath });
-}
-
-export async function connectToPostgreSqlDb(driver: string, server: string, port: number, database: string, uid: string, pwd: string) : Promise<void> {
-    return await invoke('db_connect_postgresql', { driver, server, port, database, uid, pwd });
-}
-
-export async function connectToMySqlDb(driver: string, server: string, port: number, database: string, user: string, password: string) : Promise<void> {
-    return await invoke('db_connect_mysql', { driver, server, port, database, user, password });
-}
-
-export async function connectToSqlServerDb(driver: string, server: string, port: number, database: string, uid: string, pwd: string) : Promise<void> {
-    return await invoke('db_connect_sqlserver', { driver, server, port, database, uid, pwd });
+export async function connectToDb(connString : string) : Promise<void> {
+    return await invoke('db_connect', { connString });
 }
 
 export async function isConnectedToDb() : Promise<boolean> {

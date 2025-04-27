@@ -4,7 +4,7 @@ use tauri::async_runtime::Mutex;
 
 struct Database {
   env: Environment,
-  conn: Box<dyn DatabaseConnectionDescriptor + Send>
+  connection_string: String
 }
 
 impl Database {
@@ -43,82 +43,15 @@ impl Database {
   }
 
   pub fn test_connection(&self) -> anyhow::Result<()> {
-    self.env.connect_with_connection_string(&self.conn.connection_string(), ConnectionOptions::default())?;
+    self.env.connect_with_connection_string(&self.connection_string, ConnectionOptions::default())?;
     Ok(())
   }
 
 
   fn connect(&self) -> anyhow::Result<Connection<'_>> {
-    Ok(self.env.connect_with_connection_string(&self.conn.connection_string(), ConnectionOptions::default())?)
+    Ok(self.env.connect_with_connection_string(&self.connection_string, ConnectionOptions::default())?)
   }
 }
-
-
-
-trait DatabaseConnectionDescriptor {
-  fn connection_string(&self) -> String;
-}
-
-
-struct SqliteConnectionDescriptor {
-  driver: String,
-  db_path: String
-}
-
-impl DatabaseConnectionDescriptor for SqliteConnectionDescriptor {
-    fn connection_string(&self) -> String {
-      format!("Driver={{{}}};Database={};", self.driver, self.db_path)
-    }
-}
-
-
-struct PostgreSqlConnectionDescriptor {
-  driver: String,
-  server: String,
-  port: u16,
-  database: String,
-  uid: String,
-  pwd: String
-}
-
-impl DatabaseConnectionDescriptor for PostgreSqlConnectionDescriptor {
-    fn connection_string(&self) -> String {
-      format!("Driver={{{}}};Server={};Port={};Database={};Uid={};Pwd={};", self.driver, self.server, self.port, self.database, self.uid, self.pwd)
-    }
-}
-
-
-struct MySqlConnectionDescriptor {
-  driver: String,
-  server: String,
-  port: u16,
-  database: String,
-  user: String,
-  password: String
-}
-
-impl DatabaseConnectionDescriptor for MySqlConnectionDescriptor {
-    fn connection_string(&self) -> String {
-      format!("Driver={{{}}};Server={};Port={};Database={};User={};Password={};", self.driver, self.server, self.port, self.database, self.user, self.password)
-    }
-}
-
-
-struct SqlServerConnectionDescriptor {
-  driver: String,
-  server: String,
-  port: u16,
-  database: String,
-  uid: String,
-  pwd: String
-}
-
-impl DatabaseConnectionDescriptor for SqlServerConnectionDescriptor {
-    fn connection_string(&self) -> String {
-      format!("Driver={{{}}};Server={};Port={};Database={};UID={};PWD={}; Trusted_Connection=yes;", self.driver, self.server, self.port, self.database, self.uid, self.pwd)
-    }
-}
-
 
 
 
@@ -137,54 +70,15 @@ impl AppState {
     Ok(driver_names)
   }
 
-  pub fn db_connect_sqlite(&mut self, driver: String, db_path: String) -> anyhow::Result<()> {
-    let conn = SqliteConnectionDescriptor {
-      driver,
-      db_path
+  pub fn db_connect(&mut self, conn_string: String) -> anyhow::Result<()> {
+    let env = Environment::new()?;
+    let db = Database {
+      env,
+      connection_string: conn_string
     };
-    self.db_connect(conn)?;
 
-    Ok(())
-  }
-
-  pub fn db_connect_postgresql(&mut self, driver: String, server: String, port: u16, database: String, uid: String, pwd: String) -> anyhow::Result<()> {
-    let conn = PostgreSqlConnectionDescriptor {
-      driver,
-      server,
-      port,
-      database,
-      uid,
-      pwd
-    };
-    self.db_connect(conn)?;
-
-    Ok(())
-  }
-
-  pub fn db_connect_mysql(&mut self, driver: String, server: String, port: u16, database: String, user: String, password: String) -> anyhow::Result<()> {
-    let conn = MySqlConnectionDescriptor {
-      driver,
-      server,
-      port,
-      database,
-      user,
-      password
-    };
-    self.db_connect(conn)?;
-
-    Ok(())
-  }
-
-  pub fn db_connect_sqlserver(&mut self, driver: String, server: String, port: u16, database: String, uid: String, pwd: String) -> anyhow::Result<()> {
-    let conn = SqlServerConnectionDescriptor {
-      driver,
-      server,
-      port,
-      database,
-      uid,
-      pwd
-    };
-    self.db_connect(conn)?;
+    db.test_connection()?;
+    self.db = Some(db);
 
     Ok(())
   }
@@ -208,20 +102,6 @@ impl AppState {
     self.db = None;
     Ok(())
   }
-
-
-  fn db_connect<C: DatabaseConnectionDescriptor + Send + 'static>(&mut self, conn: C) -> anyhow::Result<()> {
-    let env = Environment::new()?;
-    let db = Database {
-      env,
-      conn: Box::new(conn)
-    };
-
-    db.test_connection()?;
-
-    self.db = Some(db);
-    Ok(())
-  }
 }
 
 
@@ -232,55 +112,12 @@ async fn odbc_drivers() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-async fn db_connect_sqlite(
+async fn db_connect(
   app: tauri::State<'_, Mutex<AppState>>,
-  driver: String, 
-  db_path: String, 
+  conn_string: String, 
 ) -> Result<(), String> {
   let mut app_lock = app.lock().await;
-  app_lock.db_connect_sqlite(driver, db_path).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn db_connect_postgresql(
-  app: tauri::State<'_, Mutex<AppState>>, 
-  driver: String, 
-  server: String, 
-  port: u16, 
-  database: String,
-  uid: String, 
-  pwd: String
-) -> Result<(), String> {
-  let mut app_lock = app.lock().await;
-  app_lock.db_connect_postgresql(driver, server, port, database, uid, pwd).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn db_connect_mysql(
-  app: tauri::State<'_, Mutex<AppState>>, 
-  driver: String, 
-  server: String, 
-  port: u16, 
-  database: String,
-  user: String, 
-  password: String
-) -> Result<(), String> {
-  let mut app_lock = app.lock().await;
-  app_lock.db_connect_mysql(driver, server, port, database, user, password).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-async fn db_connect_sqlserver(
-  app: tauri::State<'_, Mutex<AppState>>, 
-  driver: String, 
-  server: String, 
-  port: u16, 
-  database: String,
-  uid: String, 
-  pwd: String
-) -> Result<(), String> {
-  let mut app_lock = app.lock().await;
-  app_lock.db_connect_sqlserver(driver, server, port, database, uid, pwd).map_err(|e| e.to_string())
+  app_lock.db_connect(conn_string).map_err(|e| e.to_string())
 }
 
 // TODO replace with function returning metadata (like DB kind)
@@ -319,10 +156,7 @@ pub fn run() {
     .manage(Mutex::new(AppState::default()))
     .invoke_handler(tauri::generate_handler![
       odbc_drivers,
-      db_connect_sqlite,
-      db_connect_postgresql,
-      db_connect_mysql,
-      db_connect_sqlserver,
+      db_connect,
       db_connected,
       db_execute,
       db_disconnect
