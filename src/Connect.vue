@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { computed, onMounted, ref, watch } from 'vue';
+import { Button } from 'primevue';
 
 import { connectToDb, listOdbcDrivers } from './api/tauri';
 import { defaultDbPort, filterSupportedDbKinds, readSupportedDbKind, SupportedDbKind } from './model/SupportedDbKind';
@@ -125,7 +126,7 @@ async function tryConnecting() {
     </template>
     
     <p :style="{ color: 'red' }">{{ connectionError }}</p>
-    <button @click="tryConnecting">Connect</button>
+    <Button @click="tryConnecting">Connect</Button>
   </form>
 </template>
 
