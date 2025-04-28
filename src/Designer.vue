@@ -6,10 +6,6 @@ import { Background } from '@vue-flow/background';
 
 import DbTable from './model/DbTable';
 import DbTableView from './components/DbTableView.vue';
-import DesignerState from './model/DesignerState';
-import { provideDesignerState } from './composables/useDesignerState';
-import DesignerToolMode from './model/DesignerToolMode';
-import MoveDesignerTool from './components/MoveDesignerTool.vue';
 import AddTableDesignerTool from './components/AddTableDesignerTool.vue';
 import DbTableRelation from './model/DbTableRelation';
 import DbTableRelationKind from './model/DbTableRelationKind';
@@ -20,6 +16,9 @@ import { useDbTableRelationStore } from './stores/DbTableRelationStore';
 import { useDbTableColumnStore } from './stores/DbTableColumnStore';
 import { executeDbQuery } from './api/tauri';
 import { useDbConnectionStore } from './stores/DbConnectionStore';
+import { useDesignerStateStore } from './stores/DesignerStateStore';
+import MoveDesignerTool from './components/MoveDesignerTool.vue';
+import { storeToRefs } from 'pinia';
 
 
 const { dbName } = useDbConnectionStore();
@@ -27,44 +26,64 @@ const { dbName } = useDbConnectionStore();
 
 const designerRef = useTemplateRef('designer');
 
-const designerState = reactive(new DesignerState());
-provideDesignerState(designerState);
+
+const designerStateStore = useDesignerStateStore();
+
+const { 
+  tableMovingActive,
+  tableCreationActive,
+  selectedTableRelationKind,
+} = storeToRefs(designerStateStore);
+
+const {
+  setDesignerClientPosition,
+  toggleTableMoving,
+  toggleTableCreation,
+  setSelectedTableRelationKind
+} = designerStateStore;
+
 
 onUpdated(() => {
   const bcr = designerRef.value?.getBoundingClientRect() ?? new DOMRect();
-  designerState.clientX = bcr.x;
-  designerState.clientY = bcr.y;
+  setDesignerClientPosition(bcr.x, bcr.y);
 });
 
 
-const designerToolRef = useTemplateRef('designerTool');
+const designerTools = computed(() => ([
+  {
+    id: 'Move',
+    cmp: MoveDesignerTool,
+    enabled: tableMovingActive.value
+  },
+  {
+    id: 'AddTable',
+    cmp: AddTableDesignerTool,
+    enabled: tableCreationActive.value
+  },
+]));
 
-const designerToolComponent = computed(() => {
-  if (designerState.toolMode == DesignerToolMode.Move) {
-    return MoveDesignerTool;
-  } 
-  else if (designerState.toolMode == DesignerToolMode.AddTable) {
-    return AddTableDesignerTool;
-  } 
-  else {
-    return MoveDesignerTool;
-  }
+const enabledDesignerTools = computed(() => {
+  return designerTools.value
+    .filter(c => c.enabled)
 });
+
+
+const designerToolRefs = useTemplateRef('designerToolComponents');
 
 function onDesignerClick(ev: MouseEvent) {
-  designerToolRef.value?.designerClick?.(ev);
+  designerToolRefs.value?.forEach(t => t?.designerClick?.(ev));
 }
 
 function onTableMouseDown(ev: MouseEvent, tab: DbTable) {
-  designerToolRef.value?.tableMouseDown?.(ev, tab);
+  designerToolRefs.value?.forEach(t => t?.tableMouseDown?.(ev, tab));
 }
 
 function onTableMouseUp(ev: MouseEvent, tab: DbTable) {
-  designerToolRef.value?.tableMouseUp?.(ev, tab);
+  designerToolRefs.value?.forEach(t => t?.tableMouseUp?.(ev, tab));
 }
 
 function onTableClick(ev: MouseEvent, tab: DbTable) {
-  designerToolRef.value?.tableClick?.(ev, tab);
+  designerToolRefs.value?.forEach(t => t?.tableClick?.(ev, tab));
 }
 
 
@@ -97,24 +116,7 @@ function onConnectTables(conn: Connection) {
     return;
   }
 
-  let relationKind: DbTableRelationKind;
-  switch (designerState.toolMode) {
-    case DesignerToolMode.AddRelation11:
-      relationKind = DbTableRelationKind.OneToOne;
-      break;
-    case DesignerToolMode.AddRelation1N:
-      relationKind = DbTableRelationKind.OneToMany;
-      break;
-    case DesignerToolMode.AddRelationNN:
-      relationKind = DbTableRelationKind.ManyToMany;
-      break;
-    case DesignerToolMode.AddRelationInheritance:
-      relationKind = DbTableRelationKind.InheritsFrom;
-      break;
-    default:
-      relationKind = DbTableRelationKind.OneToOne;
-  }
-
+  const relationKind = selectedTableRelationKind.value;
   const sourceColumn = getColumnById(conn.sourceHandle);
   const targetColumn = getColumnById(conn.targetHandle);
 
@@ -189,17 +191,22 @@ async function commitSql() {
       <div>
         <h2>{{ dbName }}</h2><a href="#/disconnect">Logout</a>
       </div>
-      <button @click="designerState.toolMode = DesignerToolMode.Move">Move</button>
-      <button @click="designerState.toolMode = DesignerToolMode.AddTable">Add table</button>
-      <button @click="designerState.toolMode = DesignerToolMode.AddRelation11">Add 1-1 relation</button>
-      <button @click="designerState.toolMode = DesignerToolMode.AddRelation1N">Add 1-N relation</button>
-      <button @click="designerState.toolMode = DesignerToolMode.AddRelationNN">Add N-N relation</button>
-      <button @click="designerState.toolMode = DesignerToolMode.AddRelationInheritance">Add inheritence relation</button>
+      <button @click="toggleTableMoving(true)">Move</button>
+      <button @click="toggleTableCreation(true)">Add table</button>
+      <button @click="setSelectedTableRelationKind(DbTableRelationKind.OneToOne)">Add 1-1 relation</button>
+      <button @click="setSelectedTableRelationKind(DbTableRelationKind.OneToMany)">Add 1-N relation</button>
+      <button @click="setSelectedTableRelationKind(DbTableRelationKind.ManyToMany)">Add N-N relation</button>
+      <button @click="setSelectedTableRelationKind(DbTableRelationKind.InheritsFrom)">Add inheritence relation</button>
       <button @click="generateSql">Generate SQL</button>
     </div>
 
     <div id="designer-tool">
-      <component :is="designerToolComponent" ref="designerTool"/>
+      <component 
+        v-for="tool of enabledDesignerTools"
+        :key="tool.id"
+        :is="tool.cmp"
+        ref="designerToolComponents"
+      />
     </div>
 
     <div id="designer-output" v-if="generatedSqlText">
@@ -209,7 +216,10 @@ async function commitSql() {
       <button @click="commitSql">Commit</button>
     </div>
 
-    <VueFlow :nodes="nodes" :edges="edges" :connection-mode="ConnectionMode.Strict" 
+    <VueFlow 
+      :nodes="nodes" :edges="edges" 
+      :connection-mode="ConnectionMode.Strict" 
+      :nodes-draggable="tableMovingActive"
       @pane-click="(ev) => onDesignerClick(ev)"
       @connect="onConnectTables"
       @edges-change="ev => onRelationChange(ev)"

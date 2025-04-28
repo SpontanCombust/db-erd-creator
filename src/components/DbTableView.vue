@@ -4,8 +4,6 @@ import { computed, reactive, ref, watch } from 'vue';
 
 import DbTableColumnView from './DbTableColumnView.vue';
 import DbTable from '@/model/DbTable';
-import { useDesignerState } from '@/composables/useDesignerState';
-import DesignerToolMode from '@/model/DesignerToolMode';
 import DbTableColumn from '@/model/DbTableColumn';
 import { useDbTableStore } from '../stores/DbTableStore';
 import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
@@ -22,7 +20,6 @@ const emit = defineEmits<{
 }>();
 
 
-const designerState = useDesignerState();
 const { getTableByKey: getTableById, updateTable } = useDbTableStore();
 const { getColumnsByTableId, addColumn } = useDbTableColumnStore();
 
@@ -43,16 +40,6 @@ watch(model, (value) => updateTable(value));
 const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.id));
 
 
-const relationCreationActive = computed(() => {
-  return [
-    DesignerToolMode.AddRelation11, 
-    DesignerToolMode.AddRelation1N, 
-    DesignerToolMode.AddRelationNN, 
-    DesignerToolMode.AddRelationInheritance
-  ].includes(designerState.toolMode);
-});
-
-
 </script>
 
 
@@ -60,9 +47,6 @@ const relationCreationActive = computed(() => {
   
   <div 
     class="table-container" 
-    :class="{ 
-      'table-outline': relationCreationActive
-    }"
     :style="{ left: `${model.posX}px`, top: `${model.posY}px` }"
     @mousedown="(ev) => $emit('mousedown', ev)"
     @mouseup="(ev) => $emit('mouseup', ev)"
