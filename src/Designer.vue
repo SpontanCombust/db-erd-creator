@@ -1,8 +1,11 @@
 <script setup lang="ts">
 
-import { computed, onUpdated, reactive, ref, useTemplateRef } from 'vue';
+import { computed, onUpdated, reactive, ref, useTemplateRef, watch } from 'vue';
 import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
+import { storeToRefs } from 'pinia';
+import { ToggleButton } from 'primevue';
+import { Button } from 'primevue'
 
 import DbTable from './model/DbTable';
 import DbTableView from './components/DbTableView.vue';
@@ -18,7 +21,7 @@ import { executeDbQuery } from './api/tauri';
 import { useDbConnectionStore } from './stores/DbConnectionStore';
 import { useDesignerStateStore } from './stores/DesignerStateStore';
 import MoveDesignerTool from './components/MoveDesignerTool.vue';
-import { storeToRefs } from 'pinia';
+
 
 
 const { dbName } = useDbConnectionStore();
@@ -46,6 +49,71 @@ const {
 onUpdated(() => {
   const bcr = designerRef.value?.getBoundingClientRect() ?? new DOMRect();
   setDesignerClientPosition(bcr.x, bcr.y);
+});
+
+
+const designerToolboxTableMovingActive = computed({
+  get() {
+    return tableMovingActive.value;
+  },
+  set(value) {
+    toggleTableMoving(value);
+  }
+});
+const designerToolboxTableCreationActive = computed({
+  get() {
+    return tableCreationActive.value;
+  },
+  set(value) {
+    toggleTableCreation(value);
+  }
+});
+const designerToolboxOneToOneRelActive = computed({
+  get() {
+    return selectedTableRelationKind.value == DbTableRelationKind.OneToOne;
+  },
+  set(value) {
+    if (value) {
+      setSelectedTableRelationKind(DbTableRelationKind.OneToOne);
+    }
+  }
+});
+const designerToolboxOneToManyRelActive = computed({
+  get() {
+    return selectedTableRelationKind.value == DbTableRelationKind.OneToMany;
+  },
+  set(value) {
+    if (value) {
+      setSelectedTableRelationKind(DbTableRelationKind.OneToMany);
+    }
+  }
+});
+const designerToolboxManyToManyRelActive = computed({
+  get() {
+    return selectedTableRelationKind.value == DbTableRelationKind.ManyToMany;
+  },
+  set(value) {
+    if (value) {
+      setSelectedTableRelationKind(DbTableRelationKind.ManyToMany);
+    }
+  }
+});
+const designerToolboxInheritanceRelActive = computed({
+  get() {
+    return selectedTableRelationKind.value == DbTableRelationKind.InheritsFrom;
+  },
+  set(value) {
+    if (value) {
+      setSelectedTableRelationKind(DbTableRelationKind.InheritsFrom);
+    }
+  }
+});
+
+watch(tableMovingActive, value => {
+  toggleTableMoving(value);
+});
+watch(designerToolboxTableCreationActive, value => {
+
 });
 
 
@@ -191,13 +259,13 @@ async function commitSql() {
       <div>
         <h2>{{ dbName }}</h2><a href="#/disconnect">Logout</a>
       </div>
-      <button @click="toggleTableMoving(true)">Move</button>
-      <button @click="toggleTableCreation(true)">Add table</button>
-      <button @click="setSelectedTableRelationKind(DbTableRelationKind.OneToOne)">Add 1-1 relation</button>
-      <button @click="setSelectedTableRelationKind(DbTableRelationKind.OneToMany)">Add 1-N relation</button>
-      <button @click="setSelectedTableRelationKind(DbTableRelationKind.ManyToMany)">Add N-N relation</button>
-      <button @click="setSelectedTableRelationKind(DbTableRelationKind.InheritsFrom)">Add inheritence relation</button>
-      <button @click="generateSql">Generate SQL</button>
+      <ToggleButton v-model="designerToolboxTableMovingActive">Move</ToggleButton>
+      <ToggleButton v-model="designerToolboxTableCreationActive">Add table</ToggleButton>
+      <ToggleButton v-model="designerToolboxOneToOneRelActive">Add 1-1 relation</ToggleButton>
+      <ToggleButton v-model="designerToolboxOneToManyRelActive">Add 1-N relation</ToggleButton>
+      <ToggleButton v-model="designerToolboxManyToManyRelActive">Add N-N relation</ToggleButton>
+      <ToggleButton v-model="designerToolboxInheritanceRelActive">Add inheritence relation</ToggleButton>
+      <Button @click="generateSql">Generate SQL</Button>
     </div>
 
     <div id="designer-tool">
@@ -212,8 +280,8 @@ async function commitSql() {
     <div id="designer-output" v-if="generatedSqlText">
       <textarea>{{ generatedSqlText }}</textarea>
       <textarea :style="{ color: 'orange' }">{{ sqlCommitResult }}</textarea>
-      <button @click="generatedSql = []; sqlCommitResult = ''">Close</button>
-      <button @click="commitSql">Commit</button>
+      <Button @click="generatedSql = []; sqlCommitResult = ''">Close</Button>
+      <Button @click="commitSql">Commit</Button>
     </div>
 
     <VueFlow 
