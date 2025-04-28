@@ -33,12 +33,17 @@ export const useDbTableColumnStore = defineStore('DbTableColumn', () => {
         }
     }
 
+    function clearColumns() {
+        columns.value = [];
+    }
+
     return { 
         columns, 
         addColumn, 
         getColumnByKey, 
         getColumnsByTableId, 
         updateColumn, 
-        removeColumn 
+        removeColumn,
+        clearColumns
     };
 });

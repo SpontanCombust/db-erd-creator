@@ -4,7 +4,7 @@ import { computed, onUpdated, reactive, ref, useTemplateRef, watch } from 'vue';
 import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { storeToRefs } from 'pinia';
-import { ToggleButton } from 'primevue';
+import { FileUpload, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
 import { Button } from 'primevue'
 
 import DbTable from './model/DbTable';
@@ -22,9 +22,11 @@ import { useDbConnectionStore } from './stores/DbConnectionStore';
 import { useDesignerStateStore } from './stores/DesignerStateStore';
 import MoveDesignerTool from './components/MoveDesignerTool.vue';
 import { useService } from './composables/useService';
+import JsonPersistenceService from './services/JsonPersistenceService';
 
 
 const sqlEmitterService = useService(SqlEmitterService);
+const jsonPersistenceService = useService(JsonPersistenceService);
 
 const { dbName } = useDbConnectionStore();
 
@@ -43,6 +45,36 @@ const {
   toggleTableCreation,
   setSelectedTableRelationKind
 } = designerStateStore;
+
+
+async function loadDesign(ev: FileUploadSelectEvent) {
+  if (ev.files) {
+    const file = ev.files instanceof File ? ev.files : ev.files.at(0);
+    if (!file) {
+      return;
+    }
+    
+    const json = await file.text();
+    console.log(json);
+
+    try {
+      jsonPersistenceService.loadDesignFromJson(json);
+    } catch (err: any) {
+      console.error(err);
+    }
+  }
+}
+
+function saveDesign() {
+  const json = jsonPersistenceService.saveCurrentDesignToJson();
+  const link = document.createElement("a");
+  const file = new Blob([json], { type: 'application/json' });
+  link.href = URL.createObjectURL(file);
+  link.download = `${dbName}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 
 
 const designerRef = useTemplateRef('designer');
@@ -156,18 +188,20 @@ function onTableClick(ev: MouseEvent, tab: DbTable) {
 }
 
 
-const { tables, removeTable } = useDbTableStore();
-const { relations, addRelation, removeRelation } = useDbTableRelationStore();
+const { tables } = storeToRefs(useDbTableStore());
+const { removeTable } = useDbTableStore();
 const { getColumnByKey: getColumnById } = useDbTableColumnStore();
+const { relations } = storeToRefs(useDbTableRelationStore());
+const { addRelation, removeRelation } = useDbTableRelationStore();
 
-const nodes = computed<Node[]>(() => tables.map(t => ({
+const nodes = computed<Node[]>(() => tables.value.map(t => ({
   id: t.id,
   position: { x: t.posX, y: t.posY },
   type: 'table',
   data: t.id,
 } as Node)));
 
-const edges = computed<Edge[]>(() => relations.map(r => ({
+const edges = computed<Edge[]>(() => relations.value.map(r => ({
   id: r.sourceColumnId + '--' + r.targetColumnId,
   source: r.sourceTableId,
   sourceHandle: r.sourceColumnId,
@@ -259,6 +293,9 @@ async function commitSql() {
       <div>
         <h2>{{ dbName }}</h2><a href="#/disconnect">Logout</a>
       </div>
+      <Button @click="saveDesign" label="Save" icon="pi pi-save"/>
+      <FileUpload mode="basic" accept="application/json" @select="loadDesign" custom-upload auto chooseLabel="Load" icon="pi pi-upload"/>
+
       <ToggleButton v-model="designerToolboxTableMovingActive">Move</ToggleButton>
       <ToggleButton v-model="designerToolboxTableCreationActive">Add table</ToggleButton>
       <ToggleButton v-model="designerToolboxOneToOneRelActive">Add 1-1 relation</ToggleButton>
@@ -304,3 +341,13 @@ async function commitSql() {
     </VueFlow>
   </div>
 </template>
+
+
+<style scoped>
+
+.p-fileupload {
+  display: inline-block;
+  margin: 0;
+}
+
+</style>

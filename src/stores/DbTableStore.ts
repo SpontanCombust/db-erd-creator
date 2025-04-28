@@ -29,11 +29,16 @@ export const useDbTableStore = defineStore('DbTable', () => {
         }
     }
 
+    function clearTables() {
+        tables.value = [];
+    }
+
     return { 
         tables, 
         addTable, 
         getTableByKey, 
         updateTable, 
-        removeTable 
+        removeTable,
+        clearTables
     };
 });

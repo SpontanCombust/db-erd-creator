@@ -9,6 +9,8 @@ import Disconnect from './Disconnect.vue';
 import { provideService } from './composables/useService';
 import SqlEmitterService from './services/SqlEmitterService';
 import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
+import DesignSerializerService from './services/DesignSerializerService';
+import JsonPersistenceService from './services/JsonPersistenceService';
 
 
 const routes = {
@@ -36,8 +38,12 @@ const currentView = computed(() => {
 });
 
 
+const designSerializerService = new DesignSerializerService();
+
 provideService(SqlEmitterService);
 provideService(OdbcConnectionStringFactory);
+provideService(DesignSerializerService, designSerializerService);
+provideService(JsonPersistenceService, new JsonPersistenceService(designSerializerService));
 
 </script>
 

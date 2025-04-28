@@ -33,12 +33,17 @@ export const useDbTableRelationStore = defineStore('DbTableRelation', () => {
         }
     }
 
+    function clearRelations() {
+        relations.value = [];
+    }
+
     return { 
         relations, 
         addRelation, 
         getRelationByKey, 
         getRelationsByTargetTableId,
         updateRelation, 
-        removeRelation 
+        removeRelation,
+        clearRelations
     };
 });
