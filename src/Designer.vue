@@ -21,13 +21,12 @@ import { executeDbQuery } from './api/tauri';
 import { useDbConnectionStore } from './stores/DbConnectionStore';
 import { useDesignerStateStore } from './stores/DesignerStateStore';
 import MoveDesignerTool from './components/MoveDesignerTool.vue';
+import { useService } from './composables/useService';
 
 
+const sqlEmitterService = useService(SqlEmitterService);
 
 const { dbName } = useDbConnectionStore();
-
-
-const designerRef = useTemplateRef('designer');
 
 
 const designerStateStore = useDesignerStateStore();
@@ -45,6 +44,8 @@ const {
   setSelectedTableRelationKind
 } = designerStateStore;
 
+
+const designerRef = useTemplateRef('designer');
 
 onUpdated(() => {
   const bcr = designerRef.value?.getBoundingClientRect() ?? new DOMRect();
@@ -230,8 +231,7 @@ const generatedSql = ref<{ subject: string, sql: string }[]>([]);
 const generatedSqlText = computed(() => generatedSql.value.map(stmt => stmt.sql).join("\n\n"));
 
 function generateSql() {
-  const svc = new SqlEmitterService();
-  generatedSql.value = svc.emitSql();
+  generatedSql.value = sqlEmitterService.emitSql();
 }
 
 const sqlCommitResult = ref('');

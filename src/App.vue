@@ -6,6 +6,9 @@ import Connect from './Connect.vue';
 import Designer from './Designer.vue';
 import NotFound from './NotFound.vue';
 import Disconnect from './Disconnect.vue';
+import { provideService } from './composables/useService';
+import SqlEmitterService from './services/SqlEmitterService';
+import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
 
 
 const routes = {
@@ -31,6 +34,10 @@ const currentView = computed(() => {
 
   return routeComponent;
 });
+
+
+provideService(SqlEmitterService);
+provideService(OdbcConnectionStringFactory);
 
 </script>
 

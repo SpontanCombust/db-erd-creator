@@ -6,6 +6,10 @@ import { connectToDb, listOdbcDrivers } from './api/tauri';
 import { defaultDbPort, filterSupportedDbKinds, readSupportedDbKind, SupportedDbKind } from './model/SupportedDbKind';
 import { useDbConnectionStore } from './stores/DbConnectionStore';
 import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
+import { useService } from './composables/useService';
+
+
+const connectionStringFactory = useService(OdbcConnectionStringFactory);
 
 
 const availableDrivers = ref<string[]>([]);
@@ -51,21 +55,19 @@ async function tryConnecting() {
       return;
     }
 
-    const connStringFactory = new OdbcConnectionStringFactory();
     let connString = '';
-
     switch (selectedDbKind.value) {
       case SupportedDbKind.SQLite:
-        connString = connStringFactory.sqlite(selectedDriver.value, formDatabase.value);
+        connString = connectionStringFactory.sqlite(selectedDriver.value, formDatabase.value);
         break;
       case SupportedDbKind.PostgreSQL:
-        connString = connStringFactory.postgresql(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value);
+        connString = connectionStringFactory.postgresql(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value);
         break;
       case SupportedDbKind.MySQL:
-        connString = connStringFactory.mysql(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value)
+        connString = connectionStringFactory.mysql(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value)
         break;
       case SupportedDbKind.SQLServer:
-        connString = connStringFactory.sqlserver(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value)
+        connString = connectionStringFactory.sqlserver(selectedDriver.value, formServer.value, formPort.value, formDatabase.value, formUser.value, formPassword.value)
         break;
     }
 
