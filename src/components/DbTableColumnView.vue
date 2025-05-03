@@ -2,9 +2,10 @@
 
 import DbTableColumn from '@/model/DbTableColumn';
 import { Handle, Position } from '@vue-flow/core';
+import { computed, reactive, ref, useTemplateRef, watch } from 'vue';
 
-import { reactive, watch } from 'vue';
 import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
+import { Button, Checkbox, InputText, Popover } from 'primevue';
 
 
 const props = defineProps<{
@@ -28,15 +29,38 @@ const model = reactive(function() {
 watch(model, (value) => updateColumn(value));
 
 
-function switchKeyType() {
-  switch (model.keyType) {
-    case null:
-      model.keyType = "PK"; break;
-    case "PK":
-      model.keyType = "FK"; break;
-    default:
-      model.keyType = null;
+const keyType = computed(() => {
+  if (model.isPrimaryKey) {
+    return "PK";
   }
+  else if (model.isForeignKey) {
+    return "FK";
+  }
+  else {
+    return undefined;
+  }
+});
+
+function switchKeyType() {
+  if (model.isPrimaryKey) {
+    model.isPrimaryKey = false;
+    model.isForeignKey = true;
+  }
+  else if (model.isForeignKey) {
+    model.isPrimaryKey = false;
+    model.isForeignKey = false;
+  }
+  else {
+    model.isPrimaryKey = true;
+    model.isForeignKey = false;
+  }
+}
+
+
+const attributesPopoverRef = useTemplateRef('attrPopover');;
+
+function toggleAttributesPopover(ev: Event) {
+  attributesPopoverRef.value?.toggle(ev);
 }
 
 </script>
@@ -45,17 +69,32 @@ function switchKeyType() {
 <template>
   
 <li class="table-column nodrag">
-  <Handle :id="model.id" :style="{ opacity: model.keyType == 'FK' ? 1 : 0 }" type="target" :position="Position.Left"/>
+  <Handle :id="model.id" :style="{ opacity: model.isForeignKey ? 1 : 0 }" type="target" :position="Position.Left"/>
   <div class="table-column-key" @click="switchKeyType">
-    {{ model.keyType }}
+    {{ keyType }}
   </div>
   <span>
-    <input type="text" v-model="model.name" placeholder="Column name"/>
+    <InputText type="text" v-model="model.name" placeholder="Column name"/>
   </span>
   <span>
-    <input type="text" v-model="model.type" placeholder="Column type"/>
+    <InputText type="text" v-model="model.type" placeholder="Column type"/>
   </span>
-  <Handle :id="model.id" :style="{ opacity: model.keyType == 'PK' ? 1 : 0 }" type="source" :position="Position.Right"/>
+  <Button type="button" icon="pi pi-ellipsis-v" @click="toggleAttributesPopover"/>
+  <Popover ref="attrPopover">
+    <div>
+      <Checkbox v-model="model.isNullable" inputId="attrIsNullable" binary/>
+      <label for="attrIsNullable">Nullable</label>
+    </div>
+    <div>
+      <Checkbox v-model="model.isUnique" inputId="attrIsUnique" binary/>
+      <label for="attrIsUnique">Unique</label>
+    </div>
+    <div>
+      <InputText type="text" v-model="model.defaultValue" id="attrDefaultValue"/>
+      <label for="attrDefaultValue">Default value</label>
+    </div>
+  </Popover>
+  <Handle :id="model.id" :style="{ opacity: model.isPrimaryKey ? 1 : 0 }" type="source" :position="Position.Right"/>
 </li>
   
 </template>

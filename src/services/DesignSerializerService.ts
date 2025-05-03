@@ -1,13 +1,11 @@
 import type DbDesignDto from "@/dto/DbDesignDto";
 import type DbTableColumnDto from "@/dto/DbTableColumnDto";
-import type { DbTableColumnKeyTypeDto } from "@/dto/DbTableColumnKeyTypeDto";
 import type DbTableDto from "@/dto/DbTableDto";
 import type DbTableRelationDto from "@/dto/DbTableRelationDto";
 import DbTableRelationKindDto from "@/dto/DbTableRelationKindDto";
 import type DbDesign from "@/model/DbDesign";
 import DbTable from "@/model/DbTable";
 import DbTableColumn from "@/model/DbTableColumn";
-import type { DbTableColumnKeyType } from "@/model/DbTableColumnKeyType";
 import DbTableRelation from "@/model/DbTableRelation";
 import DbTableRelationKind from "@/model/DbTableRelationKind";
 
@@ -20,7 +18,7 @@ export default class DesignSerializerService {
             relations: design.relations.map(r => this.relationModelToDto(r))
         };
 
-        return JSON.stringify(designDto);
+        return JSON.stringify(designDto, null, 2);
     }
 
     deserializeDesignFromJson(json: string) : DbDesign {
@@ -59,7 +57,11 @@ export default class DesignSerializerService {
             tableId: model.tableId,
             name: model.name,
             type: model.type,
-            keyType: this.columnKeyTypeModelToDto(model.keyType)
+            isPrimaryKey: model.isPrimaryKey,
+            isForeignKey: model.isForeignKey,
+            isNullable: model.isNullable,
+            isUnique: model.isUnique,
+            defaultValue: model.defaultValue
         }
     }
 
@@ -69,19 +71,12 @@ export default class DesignSerializerService {
             tableId: dto.tableId,
             name: dto.name,
             type: dto.type,
-            keyType: this.columnKeyTypeDtoToModel(dto.keyType)
+            isPrimaryKey: dto.isPrimaryKey,
+            isForeignKey: dto.isForeignKey,
+            isNullable: dto.isNullable,
+            isUnique: dto.isUnique,
+            defaultValue: dto.defaultValue
         });
-    }
-
-
-    private columnKeyTypeModelToDto(model: DbTableColumnKeyType) : DbTableColumnKeyTypeDto {
-        // same form
-        return model;
-    }
-
-    private columnKeyTypeDtoToModel(dto: DbTableColumnKeyTypeDto) : DbTableColumnKeyType {
-        // same form
-        return dto;
     }
 
 

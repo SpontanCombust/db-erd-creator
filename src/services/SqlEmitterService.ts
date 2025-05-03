@@ -97,7 +97,7 @@ abstract class CommonSqlEmmitter implements SqlEmitter {
 
     protected createTableColumnDefinition(column: DbTableColumn) : string {
         let colSql = `  ${column.name} ${column.type}`;
-        if (column.keyType == 'PK') {
+        if (column.isPrimaryKey) {
             colSql += ' PRIMARY KEY';
         }
         return colSql;

@@ -224,8 +224,8 @@ function onConnectTables(conn: Connection) {
   const targetColumn = getColumnById(conn.targetHandle);
 
   if (sourceColumn && targetColumn
-    && sourceColumn.keyType == 'PK'
-    && targetColumn.keyType == 'FK'
+    && sourceColumn.isPrimaryKey
+    && targetColumn.isForeignKey
   ) {
     const rel = new DbTableRelation({ 
       sourceTableId: sourceColumn.tableId,
@@ -324,6 +324,7 @@ async function commitSql() {
     <VueFlow 
       :nodes="nodes" :edges="edges" 
       :connection-mode="ConnectionMode.Strict" 
+      :zoom-on-double-click="false"
       :nodes-draggable="tableMovingActive"
       @pane-click="(ev) => onDesignerClick(ev)"
       @connect="onConnectTables"
