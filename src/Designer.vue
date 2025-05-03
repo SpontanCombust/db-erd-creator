@@ -6,6 +6,8 @@ import { Background } from '@vue-flow/background';
 import { storeToRefs } from 'pinia';
 import { FileUpload, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
 import { Button } from 'primevue'
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
+import * as tauriFs from '@tauri-apps/plugin-fs';
 
 import DbTable from './model/DbTable';
 import DbTableView from './components/DbTableView.vue';
@@ -65,14 +67,21 @@ async function loadDesign(ev: FileUploadSelectEvent) {
   }
 }
 
-function saveDesign() {
+async function saveDesign() {
+  const filePath = await tauriDialog.save({
+    title: 'Save design',
+    defaultPath: `${dbName}.json`,
+    filters: [
+      { name: 'JSON Files', extensions: ['json'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
   const json = jsonPersistenceService.saveCurrentDesignToJson();
-  const link = document.createElement("a");
-  const file = new Blob([json], { type: 'application/json' });
-  link.href = URL.createObjectURL(file);
-  link.download = `${dbName}.json`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+
+  if (filePath) {
+    await tauriFs.writeTextFile(filePath, json);
+  }
 }
 
 
