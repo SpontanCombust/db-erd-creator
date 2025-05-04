@@ -4,7 +4,7 @@ import { computed, onUpdated, reactive, ref, useTemplateRef, watch } from 'vue';
 import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { storeToRefs } from 'pinia';
-import { FileUpload, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
+import { FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
 import { Button } from 'primevue'
 import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import * as tauriFs from '@tauri-apps/plugin-fs';
@@ -25,6 +25,7 @@ import { useDesignerStateStore } from './stores/DesignerStateStore';
 import MoveDesignerTool from './components/MoveDesignerTool.vue';
 import { useService } from './composables/useService';
 import JsonPersistenceService from './services/JsonPersistenceService';
+import DbTableInheritanceKind from './model/DbTableInheritanceKind';
 
 
 const sqlEmitterService = useService(SqlEmitterService);
@@ -39,13 +40,15 @@ const {
   tableMovingActive,
   tableCreationActive,
   selectedTableRelationKind,
+  selectedTableInheritanceKind
 } = storeToRefs(designerStateStore);
 
 const {
   setDesignerClientPosition,
   toggleTableMoving,
   toggleTableCreation,
-  setSelectedTableRelationKind
+  setSelectedTableRelationKind,
+  setSelectedTableInheritanceKind
 } = designerStateStore;
 
 
@@ -150,12 +153,27 @@ const designerToolboxInheritanceRelActive = computed({
     }
   }
 });
-
-watch(tableMovingActive, value => {
-  toggleTableMoving(value);
-});
-watch(designerToolboxTableCreationActive, value => {
-
+const designerToolboxAvailableTableInheritanceKinds = [
+  {
+    label: "Single Table Inheritance",
+    value: DbTableInheritanceKind.SingleTable
+  },
+  {
+    label: "Class Table Inheritance",
+    value: DbTableInheritanceKind.ClassTable
+  },
+  {
+    label: "Concrete Table Inheritance",
+    value: DbTableInheritanceKind.ConcreteTable
+  }
+];
+const designerToolboxTableInheritanceKind = ref(function() {
+  return designerToolboxAvailableTableInheritanceKinds
+    .find(k => k.value == selectedTableInheritanceKind.value)
+    ?? designerToolboxAvailableTableInheritanceKinds[0];
+}())
+watch(designerToolboxTableInheritanceKind, value => {
+  setSelectedTableInheritanceKind(value.value);
 });
 
 
@@ -311,6 +329,15 @@ async function commitSql() {
       <ToggleButton v-model="designerToolboxOneToManyRelActive">Add 1-N relation</ToggleButton>
       <ToggleButton v-model="designerToolboxManyToManyRelActive">Add N-N relation</ToggleButton>
       <ToggleButton v-model="designerToolboxInheritanceRelActive">Add inheritence relation</ToggleButton>
+      <FloatLabel variant="in">
+        <Select labelId="designerToolboxTableInheritanceKind" 
+          v-model="designerToolboxTableInheritanceKind" 
+          :options="designerToolboxAvailableTableInheritanceKinds" 
+          optionLabel="label"
+          />
+        <label for="designerToolboxTableInheritanceKind">Table inheritance kind</label>
+      </FloatLabel>
+
       <Button @click="generateSql">Generate SQL</Button>
     </div>
 

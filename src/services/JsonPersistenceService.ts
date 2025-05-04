@@ -3,6 +3,7 @@ import type DesignSerializerService from "./DesignSerializerService";
 import { useDbTableColumnStore } from "@/stores/DbTableColumnStore";
 import { useDbTableRelationStore } from "@/stores/DbTableRelationStore";
 import type DbDesign from "@/model/DbDesign";
+import { useDesignerStateStore } from "@/stores/DesignerStateStore";
 
 export default class JsonPersistenceService {
     private serializerService: DesignSerializerService;
@@ -16,11 +17,13 @@ export default class JsonPersistenceService {
         const { tables } = useDbTableStore();
         const { columns } = useDbTableColumnStore();
         const { relations } = useDbTableRelationStore();
+        const { selectedTableInheritanceKind } = useDesignerStateStore();
 
         const design: DbDesign = {
             tables: [...tables],
             columns: [...columns],
-            relations: [...relations]
+            relations: [...relations],
+            tableInheritanceKind: selectedTableInheritanceKind
         };
 
         return this.serializerService.serializeDesignToJson(design);
@@ -30,6 +33,7 @@ export default class JsonPersistenceService {
         const { clearTables, addTable } = useDbTableStore();
         const { clearColumns, addColumn } = useDbTableColumnStore();
         const { clearRelations, addRelation } = useDbTableRelationStore();
+        const { setSelectedTableInheritanceKind } = useDesignerStateStore();
 
         clearTables();
         clearColumns();
@@ -46,5 +50,7 @@ export default class JsonPersistenceService {
         for (const r of design.relations) {
             addRelation(r);
         }
+
+        setSelectedTableInheritanceKind(design.tableInheritanceKind);
     } 
 }

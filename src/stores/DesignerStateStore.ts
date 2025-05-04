@@ -1,3 +1,4 @@
+import DbTableInheritanceKind from "@/model/DbTableInheritanceKind";
 import DbTableRelationKind from "@/model/DbTableRelationKind";
 
 import { defineStore } from "pinia";
@@ -10,6 +11,7 @@ export const useDesignerStateStore = defineStore('DesignerState', () => {
     const tableMovingActive = ref(true);
     const tableCreationActive = ref(false);
     const selectedTableRelationKind = ref(DbTableRelationKind.OneToMany);
+    const selectedTableInheritanceKind = ref(DbTableInheritanceKind.ConcreteTable);
 
     function setDesignerClientPosition(x: number, y: number) {
         clientX.value = x;
@@ -34,15 +36,21 @@ export const useDesignerStateStore = defineStore('DesignerState', () => {
         selectedTableRelationKind.value = kind;
     }
 
+    function setSelectedTableInheritanceKind(kind: DbTableInheritanceKind) {
+        selectedTableInheritanceKind.value = kind;
+    }
+
     
     return {
         clientX, clientY,
         tableMovingActive,
         tableCreationActive,
         selectedTableRelationKind,
+        selectedTableInheritanceKind,
         setDesignerClientPosition,
         toggleTableMoving,
         toggleTableCreation,
-        setSelectedTableRelationKind
+        setSelectedTableRelationKind,
+        setSelectedTableInheritanceKind
     }
 });

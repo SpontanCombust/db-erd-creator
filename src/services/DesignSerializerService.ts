@@ -1,11 +1,13 @@
 import type DbDesignDto from "@/dto/DbDesignDto";
 import type DbTableColumnDto from "@/dto/DbTableColumnDto";
 import type DbTableDto from "@/dto/DbTableDto";
+import DbTableInheritanceKindDto from "@/dto/DbTableInheritanceKindDto";
 import type DbTableRelationDto from "@/dto/DbTableRelationDto";
 import DbTableRelationKindDto from "@/dto/DbTableRelationKindDto";
 import type DbDesign from "@/model/DbDesign";
 import DbTable from "@/model/DbTable";
 import DbTableColumn from "@/model/DbTableColumn";
+import DbTableInheritanceKind from "@/model/DbTableInheritanceKind";
 import DbTableRelation from "@/model/DbTableRelation";
 import DbTableRelationKind from "@/model/DbTableRelationKind";
 
@@ -15,19 +17,21 @@ export default class DesignSerializerService {
         const designDto: DbDesignDto = {
             tables: design.tables.map(t => this.tableModelToDto(t)),
             columns: design.columns.map(c => this.columnModelToDto(c)),
-            relations: design.relations.map(r => this.relationModelToDto(r))
+            relations: design.relations.map(r => this.relationModelToDto(r)),
+            tableInheritanceKind: this.tableInheritanceKindModelToDto(design.tableInheritanceKind)
         };
 
         return JSON.stringify(designDto, null, 2);
     }
-
+    //FIXME take undefined into account
     deserializeDesignFromJson(json: string) : DbDesign {
         const designDto: DbDesignDto = JSON.parse(json);
 
         return {
             tables: designDto.tables.map(t => this.tableDtoToModel(t)),
             columns: designDto.columns.map(c => this.columnDtoToModel(c)),
-            relations: designDto.relations.map(r => this.relationDtoToModel(r))
+            relations: designDto.relations.map(r => this.relationDtoToModel(r)),
+            tableInheritanceKind: this.tableInheritanceKindDtoToModel(designDto.tableInheritanceKind)
         }
     }
 
@@ -116,6 +120,23 @@ export default class DesignSerializerService {
             case DbTableRelationKindDto.OneToMany: return DbTableRelationKind.OneToMany;
             case DbTableRelationKindDto.ManyToMany: return DbTableRelationKind.ManyToMany;
             case DbTableRelationKindDto.InheritsFrom: return DbTableRelationKind.InheritsFrom;
+        }
+    }
+
+
+    private tableInheritanceKindModelToDto(model: DbTableInheritanceKind) : DbTableInheritanceKindDto {
+        switch (model) {
+            case DbTableInheritanceKind.SingleTable: return DbTableInheritanceKindDto.SingleTable;
+            case DbTableInheritanceKind.ClassTable: return DbTableInheritanceKindDto.ClassTable;
+            case DbTableInheritanceKind.ConcreteTable: return DbTableInheritanceKindDto.ConcreteTable;
+        }
+    }
+
+    private tableInheritanceKindDtoToModel(dto: DbTableInheritanceKindDto) : DbTableInheritanceKind {
+        switch (dto) {
+            case DbTableInheritanceKindDto.SingleTable: return DbTableInheritanceKind.SingleTable;
+            case DbTableInheritanceKindDto.ClassTable: return DbTableInheritanceKind.ClassTable;
+            case DbTableInheritanceKindDto.ConcreteTable: return DbTableInheritanceKind.ConcreteTable;
         }
     }
 }
