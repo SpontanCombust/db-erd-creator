@@ -252,7 +252,7 @@ function onConnectTables(conn: Connection) {
 
   if (sourceColumn && targetColumn
     && sourceColumn.isPrimaryKey
-    && targetColumn.isForeignKey
+    && (targetColumn.isForeignKey || sourceColumn.isPrimaryKey)
   ) {
     const rel = new DbTableRelation({ 
       sourceTableId: sourceColumn.tableId,

@@ -69,7 +69,7 @@ function toggleAttributesPopover(ev: Event) {
 <template>
   
 <li class="table-column nodrag">
-  <Handle :id="model.id" :style="{ opacity: model.isForeignKey ? 1 : 0 }" type="target" :position="Position.Left"/>
+  <Handle :id="model.id" :style="{ opacity: (model.isPrimaryKey || model.isForeignKey) ? 1 : 0 }" type="target" :position="Position.Left"/>
   <div class="table-column-key" @click="switchKeyType">
     {{ keyType }}
   </div>
