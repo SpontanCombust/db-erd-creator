@@ -14,9 +14,23 @@ import { useService } from './composables/useService';
 const connectionStringFactory = useService(OdbcConnectionStringFactory);
 
 
+const availableDbKinds = function() {
+  return Object.keys(SupportedDbKind)
+    .map(k => Number(k))
+    .filter(k => !isNaN(k))
+    .map(k => ({
+      value: k as SupportedDbKind,
+      label: SupportedDbKind[k]
+    }));
+}();
+const selectedDbKind = ref<SupportedDbKind>(SupportedDbKind.SQLite);
+
 const availableDrivers = ref<string[]>([]);
-const selectedDriver = ref('');
-const selectedDbKind = computed(() => readSupportedDbKind(selectedDriver.value));
+const availableDbKindDrivers = computed(() => {
+  return availableDrivers.value
+    .filter(driv => readSupportedDbKind(driv) == selectedDbKind.value)
+});
+const selectedDriver = ref<string | undefined>(undefined);
 const driverError = ref('');
 
 onMounted(async () => {
@@ -26,11 +40,11 @@ onMounted(async () => {
     driverError.value = err;
   }
 
-  if (availableDrivers.value.length > 0) {
-    selectedDriver.value = availableDrivers.value[0];
-  } else {
-    driverError.value = "No driver found for supported databases";
-  }
+  selectedDriver.value = availableDbKindDrivers.value.at(0);
+});
+
+watch(selectedDbKind, value => {
+  selectedDriver.value = availableDbKindDrivers.value.at(0);
 });
 
 
@@ -43,6 +57,7 @@ const formDatabase = ref('');
 watch(selectedDbKind, (value) => {
   if (value) {
     formPort.value = defaultDbPort(value);
+    formDatabase.value = '';
   }
 }, { immediate: true });
 
@@ -64,6 +79,10 @@ const connectionError = ref('');
 const { storeConnection } = useDbConnectionStore();
 
 async function tryConnecting() {
+  if (!selectedDriver.value) {
+    return;
+  }
+
   try {
     if (selectedDbKind.value == undefined) {
       console.error("Unexpected: selected driver not supported");
@@ -103,7 +122,20 @@ async function tryConnecting() {
 <template>
   <form @submit.prevent="">
     <FloatLabel variant="on" class="form-input">
-      <Select id="selectedDriver" labelId="selectedDriverLabel" v-model="selectedDriver" :options="availableDrivers"/>
+      <Select id="selectedDbKind" labelId="selectedDbKindLabel" 
+        v-model="selectedDbKind" 
+        :options="availableDbKinds"
+        option-value="value"
+        option-label="label" 
+      />
+      <label for="selectedDbKindLabel">Select database provider</label>
+    </FloatLabel>
+    <FloatLabel variant="on" class="form-input">
+      <Select id="selectedDriver" labelId="selectedDriverLabel" 
+        v-model="selectedDriver" 
+        :options="availableDbKindDrivers" 
+        empty-message="None installed for this provider"
+      />
       <label for="selectedDriverLabel">Select ODBC driver</label>
       <p :style="{ color: 'red' }">{{ driverError }}</p>
     </FloatLabel>
@@ -141,7 +173,7 @@ async function tryConnecting() {
     </template>
     
     <p :style="{ color: 'red' }">{{ connectionError }}</p>
-    <Button id="connectBtn" @click="tryConnecting">Connect</Button>
+    <Button id="connectBtn" @click="tryConnecting" :disabled="!selectedDriver">Connect</Button>
   </form>
 </template>
 
@@ -185,7 +217,7 @@ async function tryConnecting() {
   }
 
   #selectedDriver {
-    margin-bottom: 1em;
+    margin-bottom: 2em;
   }
 
   #connectBtn {
