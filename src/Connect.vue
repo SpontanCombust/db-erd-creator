@@ -1,7 +1,8 @@
 <script setup lang="ts">
 
 import { computed, onMounted, ref, watch } from 'vue';
-import { Button } from 'primevue';
+import { Button, Select, InputText, InputNumber, FloatLabel } from 'primevue';
+import * as tauriDialog from '@tauri-apps/plugin-dialog';
 
 import { connectToDb, listOdbcDrivers } from './api/tauri';
 import { defaultDbPort, filterSupportedDbKinds, readSupportedDbKind, SupportedDbKind } from './model/SupportedDbKind';
@@ -45,6 +46,19 @@ watch(selectedDbKind, (value) => {
   }
 }, { immediate: true });
 
+async function browseSqliteDb() {
+  const filePath = await tauriDialog.open({
+    title: 'Choose SQLite database file',
+    filters: [
+      { name: 'SQLite Database Files', extensions: ['sqlite', 'db'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (filePath) {
+    formDatabase.value = filePath;
+  }
+}
 
 const connectionError = ref('');
 const { storeConnection } = useDbConnectionStore();
@@ -87,61 +101,95 @@ async function tryConnecting() {
 
 
 <template>
-  <form @submit="">
-    <label>
-      Select ODBC driver
-      <select v-model="selectedDriver">
-        <option v-for="driv of availableDrivers" :value="driv">{{ driv }}</option>
-      </select>
+  <form @submit.prevent="">
+    <FloatLabel variant="on" class="form-input">
+      <Select id="selectedDriver" labelId="selectedDriverLabel" v-model="selectedDriver" :options="availableDrivers"/>
+      <label for="selectedDriverLabel">Select ODBC driver</label>
       <p :style="{ color: 'red' }">{{ driverError }}</p>
-    </label>
+    </FloatLabel>
   
     <template v-if="selectedDbKind == SupportedDbKind.SQLite">
-      <label>
-        Database file path
-        <input type="text" v-model="formDatabase"/>
-      </label>
+      <div id="sqlite-db" class="form-input">
+        <FloatLabel variant="on" class="full-width">
+          <InputText id="formDatabase" class="full-width" type="text" v-model="formDatabase" readonly disabled/>
+          <label for="formDatabase">Database file path</label>
+        </FloatLabel>
+        <Button @click="browseSqliteDb" icon="pi pi-upload" label="Browse"/>
+      </div>
     </template>
     <template v-else>
-      <label>
-        Server address
-        <input type="text" v-model="formServer"/>
-      </label>
-      <label>
-        Server port
-        <input type="number" v-model="formPort"/>
-      </label>
-      <label>
-        Database name
-        <input type="text" v-model="formDatabase"/>
-      </label>
-      <label>
-        User
-        <input type="text" v-model="formUser"/>
-      </label>
-      <label>
-        Password
-        <input type="password" v-model="formPassword"/>
-      </label>
+      <FloatLabel variant="on" class="form-input">
+        <InputText id="formServer" type="text" v-model="formServer"/>
+        <label for="formServer">Server address</label>
+      </FloatLabel>
+      <FloatLabel variant="on" class="form-input">
+        <InputNumber inputId="formPort" type="number" v-model="formPort" :useGrouping="false" :min="0" :max="65535"/>
+        <label for="formPort">Server port</label>
+      </FloatLabel>
+      <FloatLabel variant="on" class="form-input">
+        <InputText id="formDatabase" type="text" v-model="formDatabase"/>
+        <label for="formDatabase">Database name</label>
+      </FloatLabel>
+      <FloatLabel variant="on" class="form-input">
+        <InputText id="formUser" type="text" v-model="formUser"/>
+        <label for="formUser">User</label>
+      </FloatLabel>
+      <FloatLabel variant="on" class="form-input">
+        <InputText id="formPassword" type="password" v-model="formPassword"/>
+        <label for="formPassword">Password</label>
+      </FloatLabel>
     </template>
     
     <p :style="{ color: 'red' }">{{ connectionError }}</p>
-    <Button @click="tryConnecting">Connect</Button>
+    <Button id="connectBtn" @click="tryConnecting">Connect</Button>
   </form>
 </template>
 
 
 <style scoped>
+  .form-input {
+    display: flex;
+    flex-direction: column;
+    width: 25em;
+  }
+
+
   form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    width: 100%;
+    height: 98vh;
     padding: 3%;
+    gap: 0.4em;
   }
-  label {
-    display: block;
+
+  form > * {
+    min-width: 20em;
   }
-  label:first-of-type {
-    margin-bottom: 1rem;
+
+  #sqlite-db {
+    display: flex;
+    flex-direction: row;
+    gap: 0.1em;
   }
-  label:last-of-type {
-    margin-bottom: 1rem;
+
+  #sqlite-db > span {
+    flex: auto;
   }
+
+  #sqlite-db > button {
+    /* display: inline-block; */
+  }
+
+  #selectedDriver {
+    margin-bottom: 1em;
+  }
+
+  #connectBtn {
+    margin-top: 1em;
+  }
+
 </style>

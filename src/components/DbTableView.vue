@@ -7,6 +7,8 @@ import DbTable from '@/model/DbTable';
 import DbTableColumn from '@/model/DbTableColumn';
 import { useDbTableStore } from '../stores/DbTableStore';
 import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
+import { Handle, Position } from '@vue-flow/core';
+import { Button, InputText } from 'primevue';
 
 
 const props = defineProps<{
@@ -40,6 +42,11 @@ watch(model, (value) => updateTable(value));
 const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.id));
 
 
+function onAddColumnClick() {
+  const col = new DbTableColumn({ tableId: model.id });
+  addColumn(col);
+}
+ 
 </script>
 
 
@@ -52,15 +59,17 @@ const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.i
     @mouseup="(ev) => $emit('mouseup', ev)"
     @click="(ev) => $emit('click', ev)"
   >
+    <Handle :id="model.id" type="source" :position="Position.Top"/>
     <div class="table-header">
-      <input type="text" v-model="model.name" placeholder="Table name"/>
+      <InputText type="text" v-model="model.name" placeholder="Table name" size="large"/>
     </div>
     <ul class="table-content">
       <template v-for="columnId in columnIds">
         <DbTableColumnView :columnId="columnId"/>
       </template>
-      <button @click="addColumn(new DbTableColumn({ tableId: model.id }))">+</button>
+      <Button class="add-column-btn" @click="onAddColumnClick">+</Button>
     </ul>
+    <Handle :id="model.id" type="target" :position="Position.Bottom"/>
   </div>
   
 </template>
@@ -74,9 +83,11 @@ const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.i
   
   min-width: 20em;
   min-height: 20em;
+  padding: 0.4em;
   
   background-color: white;
-  border: 0.1em solid black;
+  border: 0.2em solid var(--p-primary-color);
+  border-radius: 1em;
 }
 
 .table-outline:hover {
@@ -89,11 +100,15 @@ const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.i
   flex-direction: column;
   align-items: center;
 
+  padding-bottom: 0.4em;
+  margin-bottom: 0.4em;
+
   border-bottom: 0.1em solid black;
 }
 
-.table-header input {
+.table-header .p-inputtext {
   text-align: center;
+  height: 2em;
 }
 
 .table-content {
@@ -102,6 +117,11 @@ const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.i
 
 .table-content > button {
   width: 100%;
+}
+
+.add-column-btn {
+  height: 1.5em;
+  margin-top: 0.5em;
 }
 
 </style>

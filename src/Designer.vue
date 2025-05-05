@@ -4,7 +4,7 @@ import { computed, onUpdated, reactive, ref, useTemplateRef, watch } from 'vue';
 import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { storeToRefs } from 'pinia';
-import { FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
+import { ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
 import { Button } from 'primevue'
 import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import * as tauriFs from '@tauri-apps/plugin-fs';
@@ -283,6 +283,9 @@ function onNodeChange(evs: NodeChange[]) {
       case 'remove':
         removeTable(ev.id);
         break;
+      case 'position':
+        //TODO fix position change not handled
+        break;
     }
   }
 }
@@ -316,29 +319,35 @@ async function commitSql() {
 
 <template>
   <div ref="designer" id="designer">
-    <div id="designer-toolbox">
-      <div>
-        <h2>{{ dbName }}</h2><a href="#/disconnect">Logout</a>
-      </div>
+    <div id="designer-menubar">
       <Button @click="saveDesign" label="Save" icon="pi pi-save"/>
-      <FileUpload mode="basic" accept="application/json" @select="loadDesign" custom-upload auto chooseLabel="Load" icon="pi pi-upload"/>
+      <FileUpload mode="basic" accept="application/json" @select="loadDesign" custom-upload auto chooseLabel="Load" chooseIcon="pi pi-upload"/>
 
-      <ToggleButton v-model="designerToolboxTableMovingActive">Move</ToggleButton>
-      <ToggleButton v-model="designerToolboxTableCreationActive">Add table</ToggleButton>
-      <ToggleButton v-model="designerToolboxOneToOneRelActive">Add 1-1 relation</ToggleButton>
-      <ToggleButton v-model="designerToolboxOneToManyRelActive">Add 1-N relation</ToggleButton>
-      <ToggleButton v-model="designerToolboxManyToManyRelActive">Add N-N relation</ToggleButton>
-      <ToggleButton v-model="designerToolboxInheritanceRelActive">Add inheritence relation</ToggleButton>
-      <FloatLabel variant="in">
+      <FloatLabel variant="on">
         <Select labelId="designerToolboxTableInheritanceKind" 
           v-model="designerToolboxTableInheritanceKind" 
           :options="designerToolboxAvailableTableInheritanceKinds" 
           optionLabel="label"
+          size="small"
           />
         <label for="designerToolboxTableInheritanceKind">Table inheritance kind</label>
       </FloatLabel>
 
       <Button @click="generateSql">Generate SQL</Button>
+    </div>
+    <div id="designer-toolbox">
+      <ButtonGroup>
+        <ToggleButton v-model="designerToolboxTableMovingActive">Move</ToggleButton>
+        <ToggleButton v-model="designerToolboxTableCreationActive">Add table</ToggleButton>
+      </ButtonGroup>
+      <ButtonGroup>
+        <ToggleButton v-model="designerToolboxOneToOneRelActive">1-1</ToggleButton>
+        <ToggleButton v-model="designerToolboxOneToManyRelActive">1-N</ToggleButton>
+        <ToggleButton v-model="designerToolboxManyToManyRelActive">N-N</ToggleButton>
+      </ButtonGroup>
+    </div>
+    <div id="designer-session">
+      <h2>{{ dbName }}</h2><a href="#/disconnect">Logout</a>
     </div>
 
     <div id="designer-tool">
@@ -352,9 +361,11 @@ async function commitSql() {
 
     <div id="designer-output" v-if="generatedSqlText">
       <textarea>{{ generatedSqlText }}</textarea>
-      <textarea :style="{ color: 'orange' }">{{ sqlCommitResult }}</textarea>
-      <Button @click="generatedSql = []; sqlCommitResult = ''">Close</Button>
-      <Button @click="commitSql">Commit</Button>
+      <textarea :style="{ color: 'orange' }" placeholder="Errors and warnings">{{ sqlCommitResult }}</textarea>
+      <ButtonGroup>
+        <Button @click="generatedSql = []; sqlCommitResult = ''">Close</Button>
+        <Button @click="commitSql">Commit</Button>
+      </ButtonGroup>
     </div>
 
     <VueFlow 
@@ -380,7 +391,109 @@ async function commitSql() {
 </template>
 
 
+
 <style scoped>
+
+#designer {
+  position: relative;
+
+  height: 100vh;
+  overflow: hidden;
+
+  background-color: white;
+}
+
+
+#designer-menubar {
+  display: flex;
+  flex-direction: row;
+  position: relative;
+  top: 0.5em;
+  left: 0.5em;
+
+  width: fit-content;
+  height: 2.6em;
+  gap: 0.2em;
+}
+
+
+#designer-toolbox {
+  display: flex;
+  flex-direction: row;
+  position: fixed;
+  top: 6em;
+  left: 1em;
+
+  padding: 0.5em 1em;
+  width: fit-content;
+  height: 3em;
+  gap: 1.5em;
+
+  background-color: white;
+  z-index: 3;
+  border-radius: 1em;
+  border: 2px solid var(--p-primary-color);
+}
+
+#designer-toolbox .p-buttongroup {
+  gap: 0.2em;
+}
+
+#designer-session {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+
+  position: fixed;
+  top: 0.2em;
+  right: 1em;
+
+  padding: 0.5em 1em;
+  width: fit-content;
+  gap: 1em;
+
+  text-align: center;
+}
+
+
+
+#designer-tools {
+  position: absolute;
+  visibility: hidden;
+}
+
+#designer-output {
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 10em;
+  right: 2em;
+
+  width: 50rem;
+  height: 60%;
+  padding: 0.5em;
+  gap: 0.5em;
+
+  background-color: white;
+  z-index: 10;
+  border-radius: 1em;
+  border: 2px solid var(--p-primary-color);
+}
+
+#designer-output > textarea {
+  width: 100%;
+  overflow: auto;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+#designer-output > textarea:nth-of-type(1) {
+  flex: 60%;
+}
+#designer-output > textarea:nth-of-type(2) {
+  flex: 30%;
+  max-height: 10em;
+}
 
 .p-fileupload {
   display: inline-block;
