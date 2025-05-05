@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
-import { computed, onUpdated, reactive, ref, useTemplateRef, watch } from 'vue';
-import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange } from '@vue-flow/core';
+import { computed, onUpdated, ref, useTemplateRef, watch } from 'vue';
+import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange, type NodeDragEvent, type NodeMouseEvent } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { storeToRefs } from 'pinia';
 import { ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
@@ -202,16 +202,36 @@ function onDesignerClick(ev: MouseEvent) {
   designerToolRefs.value?.forEach(t => t?.designerClick?.(ev));
 }
 
-function onTableMouseDown(ev: MouseEvent, tab: DbTable) {
-  designerToolRefs.value?.forEach(t => t?.tableMouseDown?.(ev, tab));
+function onTableMouseDown(ev: MouseEvent, tableId: string) {
+  designerToolRefs.value?.forEach(t => t?.tableMouseDown?.(ev, tableId));
 }
 
-function onTableMouseUp(ev: MouseEvent, tab: DbTable) {
-  designerToolRefs.value?.forEach(t => t?.tableMouseUp?.(ev, tab));
+function onTableMouseUp(ev: MouseEvent, tableId: string) {
+  designerToolRefs.value?.forEach(t => t?.tableMouseUp?.(ev, tableId));
 }
 
-function onTableClick(ev: MouseEvent, tab: DbTable) {
-  designerToolRefs.value?.forEach(t => t?.tableClick?.(ev, tab));
+function onTableClick(ev: NodeMouseEvent) {
+  const mouseEv = mouseEventFromNodeMouseEvent(ev);
+  if (mouseEv) {
+    const tabId = ev.node.data as string;
+    designerToolRefs.value?.forEach(t => t?.tableClick?.(mouseEv, tabId));
+  }
+}
+
+function onTableDragEnd(ev: NodeDragEvent) {
+  const mouseEv = mouseEventFromNodeMouseEvent(ev);
+  if (mouseEv) {
+    const tabId = ev.node.data as string;
+    designerToolRefs.value?.forEach(t => t?.tableDragEnd?.(mouseEv, tabId));
+  }
+}
+
+function mouseEventFromNodeMouseEvent(ev: NodeMouseEvent) : MouseEvent | null {
+  if (!('touches' in ev.event)) {
+    return ev.event as MouseEvent;
+  } else {
+    return null;
+  }
 }
 
 
@@ -377,11 +397,16 @@ async function commitSql() {
       @connect="onConnectTables"
       @edges-change="ev => onRelationChange(ev)"
       @nodes-change="ev => onNodeChange(ev)"
+      @node-drag-stop="ev => onTableDragEnd(ev)"
+      @node-click="ev => onTableClick(ev)"
     >
       <Background pattern-color="#555" :gap="20"/>
 
       <template #node-table="nodeProps">
-        <DbTableView :table-id="nodeProps.data"/>
+        <DbTableView :table-id="nodeProps.data" 
+          @mousedown="ev => onTableMouseDown(ev, nodeProps.data as string)"
+          @mouseup ="ev => onTableMouseUp(ev, nodeProps.data as string)"
+        />
       </template>
       <template #edge-relation="edgeProps">
         <DbTableRelationView v-bind="edgeProps"/>
@@ -414,6 +439,7 @@ async function commitSql() {
   width: fit-content;
   height: 2.6em;
   gap: 0.2em;
+  margin-bottom: 1em;
 }
 
 
