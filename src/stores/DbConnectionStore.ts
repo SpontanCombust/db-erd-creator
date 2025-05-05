@@ -17,7 +17,7 @@ export const useDbConnectionStore = defineStore('DbConnectionStore', () => {
 
     const connected = ref(sessionDbConnString != null);
     const driver = ref(sessionDriver ?? '');
-    const dbKind = ref(sessionDbKind ? Number.parseInt(sessionDbKind) : SupportedDbKind.SQLite);
+    const dbKind = ref(sessionDbKind ? Number.parseInt(sessionDbKind) as SupportedDbKind : SupportedDbKind.SQLite);
     const dbName = ref(sessionDbName ?? '');
     const connectionString = ref(sessionDbConnString ?? '');
 

@@ -88,7 +88,7 @@ async function tryConnecting() {
 
     if (connString != '') {
       await connectToDb(connString);
-      storeConnection(selectedDriver.value, selectedDbKind.value, formDatabase.value);
+      storeConnection(selectedDriver.value, selectedDbKind.value, formDatabase.value, connString);
   
       window.location.hash = '#/designer';
     }
