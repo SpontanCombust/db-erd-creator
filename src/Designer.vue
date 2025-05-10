@@ -219,11 +219,8 @@ function onTableClick(ev: NodeMouseEvent) {
 }
 
 function onTableDragEnd(ev: NodeDragEvent) {
-  const mouseEv = mouseEventFromNodeMouseEvent(ev);
-  if (mouseEv) {
-    const tabId = ev.node.data as string;
-    designerToolRefs.value?.forEach(t => t?.tableDragEnd?.(mouseEv, tabId));
-  }
+  const tabId = ev.node.data as string;
+  designerToolRefs.value?.forEach(t => t?.tableDragEnd?.(ev, tabId));
 }
 
 function mouseEventFromNodeMouseEvent(ev: NodeMouseEvent) : MouseEvent | null {

@@ -10,8 +10,8 @@ defineExpose({
   tableDragEnd(ev, tableId) {
     const tab = getTableByKey(tableId);
     if (tab) {
-      tab.posX = ev.clientX;
-      tab.posY = ev.clientY;
+      tab.posX = ev.node.position.x;
+      tab.posY = ev.node.position.y;
 
       updateTable(tab);
     }
