@@ -81,7 +81,8 @@ function onAddColumnClick() {
   display: flex;
   flex-direction: column;
   
-  min-width: 20em;
+  min-width: 35em;
+  width: 35em;
   min-height: 20em;
   padding: 0.4em;
   

@@ -11,6 +11,7 @@ import SqlEmitterService from './services/SqlEmitterService';
 import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
 import DesignSerializerService from './services/DesignSerializerService';
 import JsonPersistenceService from './services/JsonPersistenceService';
+import DbDataTypeTemplateProviderService from './services/DbDataTypeTemplateProviderService';
 
 
 const routes = {
@@ -44,6 +45,7 @@ provideService(SqlEmitterService);
 provideService(OdbcConnectionStringFactory);
 provideService(DesignSerializerService, designSerializerService);
 provideService(JsonPersistenceService, new JsonPersistenceService(designSerializerService));
+provideService(DbDataTypeTemplateProviderService);
 
 </script>
 

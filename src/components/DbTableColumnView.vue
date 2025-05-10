@@ -2,10 +2,13 @@
 
 import DbTableColumn from '@/model/DbTableColumn';
 import { Handle, Position } from '@vue-flow/core';
-import { computed, reactive, ref, useTemplateRef, watch } from 'vue';
+import { computed, onMounted, reactive, ref, useTemplateRef, watch } from 'vue';
+import { Button, Checkbox, IftaLabel, InputText, Popover, Select } from 'primevue';
 
 import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
-import { Button, Checkbox, InputText, Popover } from 'primevue';
+import { useService } from '@/composables/useService';
+import DbDataTypeTemplateProviderService from '@/services/DbDataTypeTemplateProviderService';
+import DbDataType from '@/model/DbDataType';
 
 
 const props = defineProps<{
@@ -13,7 +16,10 @@ const props = defineProps<{
 }>();
 
 
+const dataTypeTemplateProviderService = useService(DbDataTypeTemplateProviderService);
+
 const { getColumnByKey, updateColumn, removeColumn } = useDbTableColumnStore();
+
 
 
 const model = reactive(function() {
@@ -27,6 +33,7 @@ const model = reactive(function() {
 }());
 
 watch(model, (value) => updateColumn(value));
+
 
 
 function switchKeyType() {
@@ -59,11 +66,47 @@ const keyColor = computed(() => {
 });
 
 
-const attributesPopoverRef = useTemplateRef('attrPopover');;
+
+const availableDataTypes = Array.from(dataTypeTemplateProviderService.availableDataTypeTemplates()).map(dt => ({
+  value: dt,
+  label: dt.fullName
+}));
+
+const chosenDataType = ref<DbDataType | undefined>(undefined);
+const chosenDataTypeArgs = ref<string[]>([]);
+
+onMounted(() => {
+  const parsedType = DbDataType.parse(model.type);
+  chosenDataTypeArgs.value = parsedType.params ?? [];
+
+  const template = availableDataTypes
+    .map(({value}) => value)
+    .find(value => value.fullName == parsedType.fullName);
+  
+  if (template != undefined) {
+    chosenDataType.value = template;
+  }
+});
+
+watch(chosenDataType, typVal => {
+  if (typVal) {
+    model.type = typVal.replaceParams(chosenDataTypeArgs.value).toString();
+  }
+});
+watch(chosenDataTypeArgs, typArgsVal => {
+  if (chosenDataType.value) {
+    model.type = chosenDataType.value.replaceParams(typArgsVal).toString();
+  }
+}, { deep: true })
+
+
+
+const attributesPopoverRef = useTemplateRef('attrPopover');
 
 function toggleAttributesPopover(ev: Event) {
   attributesPopoverRef.value?.toggle(ev);
 }
+
 
 
 function onDeleteColumn() {
@@ -83,16 +126,33 @@ function onDeleteColumn() {
     :connectableStart="false"
     :connectableEnd="true"
   />
+
   <div class="table-column-key" @click="switchKeyType">
     <i class="pi pi-key" :style="{ color: keyColor }"></i>
   </div>
-  <span>
-    <InputText type="text" v-model="model.name" placeholder="Column name" size="large"/>
-  </span>
-  <span>
-    <InputText type="text" v-model="model.type" placeholder="Column type" size="large"/>
+  <InputText type="text" v-model="model.name" 
+    placeholder="Column name" 
+    size="large"
+    class="table-column-name"
+  />
+  <span class="table-column-type">
+    <Select v-model="chosenDataType" 
+      :options="availableDataTypes"
+      option-label="label" option-value="value" 
+      placeholder="Column type" 
+      filter
+      class="table-column-type-name"
+    />
+    <template v-if="chosenDataType?.params" v-for="(param, i) of chosenDataType.params">
+      <InputText type="text" v-model="chosenDataTypeArgs[i]" 
+        class="table-column-type-args" 
+        variant="outlined"
+        :placeholder="param"
+      />
+    </template>
   </span>
   <Button class="attributes-btn" type="button" icon="pi pi-ellipsis-v" @click="toggleAttributesPopover"/>
+
   <Popover ref="attrPopover" class="attributes-popover">
     <div>
       <Checkbox v-model="model.isNullable" inputId="attrIsNullable" binary/>
@@ -109,6 +169,7 @@ function onDeleteColumn() {
       <Button @click="onDeleteColumn" label="Delete" severity="danger"/>
     </div>
   </Popover>
+
   <Handle :id="model.id" 
     type="source" 
     :style="{ opacity: model.isPrimaryKey ? 1 : 0 }" 
@@ -131,14 +192,17 @@ function onDeleteColumn() {
   color: white;
 }
 
+
 .table-column {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 5fr 35fr 45fr 5fr;
+
   position: relative;
   align-items: center;
+  width: 100%;
 
   padding: 0.1em 0.8em;
-  gap: 0.2em;
+  gap: 0.4em;
 }
 
 .table-column input {
@@ -149,7 +213,7 @@ function onDeleteColumn() {
   padding: 0 0.5em;
 }
 
-.table-column > .table-column-key {
+.table-column .table-column-key {
   display: inline-block;
   min-width: 2em;
   min-height: 1em;
@@ -159,18 +223,36 @@ function onDeleteColumn() {
   cursor: pointer;
 }
 
-.table-column > span:nth-of-type(2) > input {
-  text-align: left;
+.table-column .table-column-name {
+  height: 2.5em;
+  width: 100%;
 }
 
-.table-column > span:nth-of-type(3) > input {
-  text-align: right;
+.table-column .table-column-type {
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: row;
 }
 
-.attributes-btn {
+.table-column .table-column-type-name {
+  flex: 90;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+.table-column .table-column-type-args {
+  flex: 10;
+  min-width: 0;
+  min-height: 0; 
+}
+
+.table-column .attributes-btn {
   height: 1em;
   width: 1.5em;
 }
+
 
 .attributes-popover .p-popover-content > div {
   margin: 0.5em 0;
