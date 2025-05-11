@@ -1,3 +1,5 @@
+import { NIL } from "uuid";
+
 import type DbDesignDto from "@/dto/DbDesignDto";
 import type DbTableColumnDto from "@/dto/DbTableColumnDto";
 import type DbTableDto from "@/dto/DbTableDto";
@@ -23,15 +25,15 @@ export default class DesignSerializerService {
 
         return JSON.stringify(designDto, null, 2);
     }
-    //FIXME take undefined into account
+
     deserializeDesignFromJson(json: string) : DbDesign {
         const designDto: DbDesignDto = JSON.parse(json);
 
         return {
-            tables: designDto.tables.map(t => this.tableDtoToModel(t)),
-            columns: designDto.columns.map(c => this.columnDtoToModel(c)),
-            relations: designDto.relations.map(r => this.relationDtoToModel(r)),
-            tableInheritanceKind: this.tableInheritanceKindDtoToModel(designDto.tableInheritanceKind)
+            tables: designDto.tables ? designDto.tables.map(t => this.tableDtoToModel(t)) : [],
+            columns: designDto.columns ? designDto.columns.map(c => this.columnDtoToModel(c)) : [],
+            relations: designDto.relations ? designDto.relations.map(r => this.relationDtoToModel(r)) : [],
+            tableInheritanceKind: designDto.tableInheritanceKind ? this.tableInheritanceKindDtoToModel(designDto.tableInheritanceKind) : DbTableInheritanceKind.SingleTable
         }
     }
 
@@ -47,7 +49,7 @@ export default class DesignSerializerService {
 
     private tableDtoToModel(dto: DbTableDto) : DbTable {
         return new DbTable({
-            id: dto.id,
+            id: dto.id ?? NIL,
             name: dto.name,
             posX: dto.posX,
             posY: dto.posY
@@ -71,8 +73,8 @@ export default class DesignSerializerService {
 
     private columnDtoToModel(dto: DbTableColumnDto) : DbTableColumn {
         return new DbTableColumn({
-            id: dto.id,
-            tableId: dto.tableId,
+            id: dto.id ?? NIL,
+            tableId: dto.tableId ?? NIL,
             name: dto.name,
             type: dto.type,
             isPrimaryKey: dto.isPrimaryKey,
@@ -96,11 +98,11 @@ export default class DesignSerializerService {
 
     private relationDtoToModel(dto: DbTableRelationDto) : DbTableRelation {
         return new DbTableRelation({
-            sourceTableId: dto.sourceTableId,
+            sourceTableId: dto.sourceTableId ?? NIL,
             sourceColumnId: dto.sourceColumnId,
-            targetTableId: dto.targetTableId,
+            targetTableId: dto.targetTableId ?? NIL,
             targetColumnId: dto.targetColumnId,
-            kind: this.relationKindDtoToModel(dto.kind)
+            kind: dto.kind ? this.relationKindDtoToModel(dto.kind) : DbTableRelationKind.OneToOne
         });
     }
 
@@ -120,6 +122,7 @@ export default class DesignSerializerService {
             case DbTableRelationKindDto.OneToMany: return DbTableRelationKind.OneToMany;
             case DbTableRelationKindDto.ManyToMany: return DbTableRelationKind.ManyToMany;
             case DbTableRelationKindDto.InheritsFrom: return DbTableRelationKind.InheritsFrom;
+            default: return DbTableRelationKind.OneToOne;
         }
     }
 
@@ -137,6 +140,7 @@ export default class DesignSerializerService {
             case DbTableInheritanceKindDto.SingleTable: return DbTableInheritanceKind.SingleTable;
             case DbTableInheritanceKindDto.ClassTable: return DbTableInheritanceKind.ClassTable;
             case DbTableInheritanceKindDto.ConcreteTable: return DbTableInheritanceKind.ConcreteTable;
+            default: return DbTableInheritanceKind.SingleTable;
         }
     }
 }
