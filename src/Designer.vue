@@ -1,24 +1,15 @@
 <script setup lang="ts">
 
 import { computed, onUpdated, ref, useTemplateRef, watch } from 'vue';
-import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange, type NodeDragEvent, type NodeMouseEvent } from '@vue-flow/core';
-import { Background } from '@vue-flow/background';
 import { storeToRefs } from 'pinia';
-import { ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent, type FileUploadUploadEvent } from 'primevue';
+import { ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent } from 'primevue';
 import { Button } from 'primevue'
 import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 
-import DbTable from './model/DbTable';
-import DbTableView from './components/DbTableView.vue';
 import AddTableDesignerTool from './components/AddTableDesignerTool.vue';
-import DbTableRelation from './model/DbTableRelation';
 import DbTableRelationKind from './model/DbTableRelationKind';
 import SqlEmitterService from './services/SqlEmitterService';
-import DbTableRelationView from './components/DbTableRelationView.vue';
-import { useDbTableStore } from './stores/DbTableStore';
-import { useDbTableRelationStore } from './stores/DbTableRelationStore';
-import { useDbTableColumnStore } from './stores/DbTableColumnStore';
 import { executeDbQuery } from './api/tauri';
 import { useDbConnectionStore } from './stores/DbConnectionStore';
 import { useDesignerStateStore } from './stores/DesignerStateStore';
@@ -26,6 +17,7 @@ import MoveDesignerTool from './components/MoveDesignerTool.vue';
 import { useService } from './composables/useService';
 import JsonPersistenceService from './services/JsonPersistenceService';
 import DbTableInheritanceKind from './model/DbTableInheritanceKind';
+import DesignerPane from './components/DesignerPane.vue';
 
 
 const sqlEmitterService = useService(SqlEmitterService);
@@ -143,16 +135,7 @@ const designerToolboxManyToManyRelActive = computed({
     }
   }
 });
-const designerToolboxInheritanceRelActive = computed({
-  get() {
-    return selectedTableRelationKind.value == DbTableRelationKind.InheritsFrom;
-  },
-  set(value) {
-    if (value) {
-      setSelectedTableRelationKind(DbTableRelationKind.InheritsFrom);
-    }
-  }
-});
+
 const designerToolboxAvailableTableInheritanceKinds = [
   {
     label: "Single Table Inheritance",
@@ -196,6 +179,7 @@ const enabledDesignerTools = computed(() => {
 });
 
 
+
 const designerToolRefs = useTemplateRef('designerToolComponents');
 
 function onDesignerClick(ev: MouseEvent) {
@@ -210,102 +194,14 @@ function onTableMouseUp(ev: MouseEvent, tableId: string) {
   designerToolRefs.value?.forEach(t => t?.tableMouseUp?.(ev, tableId));
 }
 
-function onTableClick(ev: NodeMouseEvent) {
-  const mouseEv = mouseEventFromNodeMouseEvent(ev);
-  if (mouseEv) {
-    const tabId = ev.node.data as string;
-    designerToolRefs.value?.forEach(t => t?.tableClick?.(mouseEv, tabId));
-  }
+function onTableClick(ev: MouseEvent, tableId: string) {
+  designerToolRefs.value?.forEach(t => t?.tableClick?.(ev, tableId));
 }
 
-function onTableDragEnd(ev: NodeDragEvent) {
-  const tabId = ev.node.data as string;
-  designerToolRefs.value?.forEach(t => t?.tableDragEnd?.(ev, tabId));
+function onTableMove(x: number, y: number, tableId: string) {
+  designerToolRefs.value?.forEach(t => t?.tableMove?.(x, y, tableId));
 }
 
-function mouseEventFromNodeMouseEvent(ev: NodeMouseEvent) : MouseEvent | null {
-  if (!('touches' in ev.event)) {
-    return ev.event as MouseEvent;
-  } else {
-    return null;
-  }
-}
-
-
-const { tables } = storeToRefs(useDbTableStore());
-const { removeTable } = useDbTableStore();
-const { getColumnByKey: getColumnById } = useDbTableColumnStore();
-const { relations } = storeToRefs(useDbTableRelationStore());
-const { addRelation, removeRelation } = useDbTableRelationStore();
-
-const nodes = computed<Node[]>(() => tables.value.map(t => ({
-  id: t.id,
-  position: { x: t.posX, y: t.posY },
-  type: 'table',
-  data: t.id,
-} as Node)));
-
-const edges = computed<Edge[]>(() => relations.value.map(r => ({
-  id: r.sourceColumnId + '--' + r.targetColumnId,
-  source: r.sourceTableId,
-  sourceHandle: r.sourceColumnId,
-  target: r.targetTableId,
-  targetHandle: r.targetColumnId,
-  type: 'relation',
-  data: r
-} as Edge)));
-
-
-function onConnectTables(conn: Connection) {
-  if (!conn.sourceHandle || !conn.targetHandle // make sure handles are valid
-    || conn.source == conn.target // make sure you cannot connect table to itself
-  ) {
-    return;
-  }
-
-  const relationKind = selectedTableRelationKind.value;
-  const sourceColumn = getColumnById(conn.sourceHandle);
-  const targetColumn = getColumnById(conn.targetHandle);
-
-  if (sourceColumn && targetColumn
-    && sourceColumn.isPrimaryKey
-    && (targetColumn.isForeignKey || sourceColumn.isPrimaryKey)
-  ) {
-    const rel = new DbTableRelation({ 
-      sourceTableId: sourceColumn.tableId,
-      sourceColumnId: sourceColumn.id,
-      targetTableId: targetColumn.tableId,
-      targetColumnId: targetColumn.id,
-      kind: relationKind
-    });
-    addRelation(rel);
-  }
-}
-
-function onRelationChange(evs: EdgeChange[]) {
-  for (const ev of evs) {
-    switch (ev.type) {
-      case 'remove': 
-        if (ev.sourceHandle && ev.targetHandle) {
-          removeRelation(ev.sourceHandle, ev.targetHandle);
-        }
-        break;
-    }
-  }
-}
-
-function onNodeChange(evs: NodeChange[]) {
-  for (const ev of evs) {
-    switch (ev.type) {
-      case 'remove':
-        removeTable(ev.id);
-        break;
-      case 'position':
-        //TODO fix position change not handled
-        break;
-    }
-  }
-}
 
 
 const generatedSql = ref<{ subject: string, sql: string }[]>([]);
@@ -385,30 +281,13 @@ async function commitSql() {
       </ButtonGroup>
     </div>
 
-    <VueFlow 
-      :nodes="nodes" :edges="edges" 
-      :connection-mode="ConnectionMode.Strict" 
-      :zoom-on-double-click="false"
-      :nodes-draggable="tableMovingActive"
-      @pane-click="(ev) => onDesignerClick(ev)"
-      @connect="onConnectTables"
-      @edges-change="ev => onRelationChange(ev)"
-      @nodes-change="ev => onNodeChange(ev)"
-      @node-drag-stop="ev => onTableDragEnd(ev)"
-      @node-click="ev => onTableClick(ev)"
-    >
-      <Background pattern-color="#555" :gap="20"/>
-
-      <template #node-table="nodeProps">
-        <DbTableView :table-id="nodeProps.data" 
-          @mousedown="ev => onTableMouseDown(ev, nodeProps.data as string)"
-          @mouseup ="ev => onTableMouseUp(ev, nodeProps.data as string)"
-        />
-      </template>
-      <template #edge-relation="edgeProps">
-        <DbTableRelationView v-bind="edgeProps"/>
-      </template>
-    </VueFlow>
+    <DesignerPane
+      @designer-click="onDesignerClick"
+      @table-mouse-down="onTableMouseDown"
+      @table-mouse-up="onTableMouseUp"
+      @table-click="onTableClick"
+      @table-move="onTableMove"
+    />
   </div>
 </template>
 

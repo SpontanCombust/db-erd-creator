@@ -5,5 +5,5 @@ export default interface DesignerToolExports {
     tableMouseDown?(ev: MouseEvent, tableId: string) : any;
     tableMouseUp?(ev: MouseEvent, tableId: string) : any;
     tableClick?(ev: MouseEvent, tableId: string) : any;
-    tableDragEnd?(ev: NodeDragEvent, tableId: string) : any;
+    tableMove?(x: number, y: number, tableId: string) : any;
 }
