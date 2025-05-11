@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 
 const props = withDefaults(defineProps<{
   id: string,
@@ -15,6 +17,16 @@ const props = withDefaults(defineProps<{
   strokeWidth: 1,
   fill: '#000'
 });
+
+
+const refX = computed(() => {
+  if (props.type == 'fork') {
+    return "23";
+  } else {
+    return "10";
+  }
+});
+
 </script>
 
 
@@ -25,7 +37,7 @@ const props = withDefaults(defineProps<{
         :id="id"
         class="vue-flow__arrowhead"
         viewBox="0 0 20 20"
-        refX="23"
+        :refX="refX"
         refY="10"
         :markerWidth="width"
         :markerHeight="height"

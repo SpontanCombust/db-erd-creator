@@ -11,8 +11,12 @@ export const useDbTableRelationStore = defineStore('DbTableRelation', () => {
         relations.value.push(relation);
     }
 
-    function getRelationByKey(sourceColumnId: string, targetColumnId: string) : DbTableRelation | undefined {
+    function getColumnRelationByKey(sourceColumnId: string, targetColumnId: string) : DbTableRelation | undefined {
         return relations.value.find(r => r.sourceColumnId == sourceColumnId && r.targetColumnId == targetColumnId);
+    }
+
+    function getRelationsBySourceTableId(sourceTableId: string) : DbTableRelation[] {
+        return relations.value.filter(r => r.sourceTableId == sourceTableId);
     }
 
     function getRelationsByTargetTableId(targetTableId: string) : DbTableRelation[] {
@@ -26,8 +30,20 @@ export const useDbTableRelationStore = defineStore('DbTableRelation', () => {
         }
     }
 
-    function removeRelation(sourceColumnId: string, targetColumnId: string) {
+    function removeColumnRelationByKey(sourceColumnId: string, targetColumnId: string) {
         const ri = relations.value.findIndex(r => r.sourceColumnId == sourceColumnId && r.targetColumnId == targetColumnId);
+        if (ri != -1) {
+            relations.value.splice(ri, 1);
+        }
+    }
+
+    function removeTableRelationByKey(sourceTableId: string, targetTableId: string) {
+        const ri = relations.value.findIndex(r => 
+            r.sourceTableId == sourceTableId && 
+            r.sourceColumnId == undefined && 
+            r.targetTableId == targetTableId &&
+            r.targetColumnId == undefined);
+
         if (ri != -1) {
             relations.value.splice(ri, 1);
         }
@@ -40,10 +56,12 @@ export const useDbTableRelationStore = defineStore('DbTableRelation', () => {
     return { 
         relations, 
         addRelation, 
-        getRelationByKey, 
+        getColumnRelationByKey, 
+        getRelationsBySourceTableId,
         getRelationsByTargetTableId,
         updateRelation, 
-        removeRelation,
+        removeColumnRelationByKey,
+        removeTableRelationByKey,
         clearRelations
     };
 });

@@ -52,7 +52,6 @@ async function loadDesign(ev: FileUploadSelectEvent) {
     }
     
     const json = await file.text();
-    console.log(json);
 
     try {
       jsonPersistenceService.loadDesignFromJson(json);

@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Background } from '@vue-flow/background';
-import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange, type NodeDragEvent, type NodeMouseEvent } from '@vue-flow/core';
+import { ConnectionMode, VueFlow, type Connection, type Edge, type EdgeChange, type Node, type NodeChange, type NodeMouseEvent } from '@vue-flow/core';
 import { storeToRefs } from 'pinia';
 
 import DbTableView from './DbTableView.vue';
 import DbTableRelationView from './DbTableRelationView.vue';
 import { useDbTableStore } from '@/stores/DbTableStore';
-import { useDbTableColumnStore } from '@/stores/DbTableColumnStore';
 import { useDbTableRelationStore } from '@/stores/DbTableRelationStore';
 import DbTableRelation from '@/model/DbTableRelation';
 import { useDesignerStateStore } from '@/stores/DesignerStateStore';
+import DbTableRelationKind from '@/model/DbTableRelationKind';
+import { useService } from '@/composables/useService';
+import DesignManagerService from '@/services/DesignManagerService';
 
 
 const emit = defineEmits<{
@@ -24,10 +26,11 @@ const emit = defineEmits<{
 
 const { tables } = storeToRefs(useDbTableStore());
 const { removeTable } = useDbTableStore();
-const { getColumnByKey: getColumnById } = useDbTableColumnStore();
 const { relations } = storeToRefs(useDbTableRelationStore());
-const { addRelation, removeRelation } = useDbTableRelationStore();
+const { addRelation, removeColumnRelationByKey, removeTableRelationByKey } = useDbTableRelationStore();
 const { tableMovingActive, selectedTableRelationKind } = storeToRefs(useDesignerStateStore());
+
+const designManagerService = useService(DesignManagerService);
 
 
 const nodes = computed<Node[]>(() => tables.value.map(t => ({
@@ -37,39 +40,123 @@ const nodes = computed<Node[]>(() => tables.value.map(t => ({
   data: t.id,
 } as Node)));
 
-const edges = computed<Edge[]>(() => relations.value.map(r => ({
-  id: r.sourceColumnId + '--' + r.targetColumnId,
-  source: r.sourceTableId,
-  sourceHandle: r.sourceColumnId,
-  target: r.targetTableId,
-  targetHandle: r.targetColumnId,
-  type: 'relation',
-  data: r
-} as Edge)));
+const edges = computed<Edge[]>(() => relations.value.map(r => {
+  let id: string;
+  let sourceHandle: string | undefined;
+  let targetHandle: string | undefined;
+
+  if (r.kind == DbTableRelationKind.InheritsFrom) {
+    id = r.sourceTableId + '--' + r.sourceTableId;
+    sourceHandle = r.sourceTableId;
+    targetHandle = r.targetTableId;
+  } else {
+    id = r.sourceColumnId + '--' + r.targetColumnId;
+    sourceHandle = r.sourceColumnId;
+    targetHandle = r.targetColumnId;
+  }
+
+  return {
+    id,
+    source: r.sourceTableId,
+    sourceHandle,
+    target: r.targetTableId,
+    targetHandle,
+    type: 'relation',
+    data: r
+  } as Edge;
+}));
+
+
+
+function analyzeConnection(source: string, sourceHandle: string | null | undefined, target: string, targetHandle: string | null | undefined) 
+: {
+    connectionType: 'inheritance' 
+    sourceTableId: string,
+    targetTableId: string
+  } | {
+    connectionType: 'composition'
+    sourceTableId: string,
+    sourceColumnId: string,
+    targetTableId: string,
+    targetColumnId: string
+  } | {
+    connectionType: 'invalid'
+  }
+{
+  if (!sourceHandle || !targetHandle) {
+    return {
+      connectionType: 'invalid'
+    }
+  }
+
+  const sourceTableId = source;
+  const targetTableId = target;
+
+  const isSourceAColumn = sourceTableId != sourceHandle;
+  const isTargetAColumn = targetTableId != targetHandle;
+
+  const isCompositionConnection = isSourceAColumn && isTargetAColumn;
+  const isInheritanceConnection = !isSourceAColumn && !isTargetAColumn;
+
+  if (isCompositionConnection) {
+    const sourceColumnId =  sourceHandle;
+    const targetColumnId = targetHandle;
+
+    return {
+      connectionType: 'composition',
+      sourceTableId,
+      sourceColumnId,
+      targetTableId,
+      targetColumnId,
+    }
+  } 
+  else if (isInheritanceConnection) {
+    return {
+      connectionType: 'inheritance',
+      sourceTableId,
+      targetTableId
+    }
+  } else {
+    return {
+      connectionType: 'invalid'
+    }
+  }
+}
 
 
 function onConnectTables(conn: Connection) {
-  if (!conn.sourceHandle || !conn.targetHandle // make sure handles are valid
-    || conn.source == conn.target // make sure you cannot connect table to itself
-  ) {
-    return;
-  }
+  const analysis = analyzeConnection(conn.source, conn.sourceHandle, conn.target, conn.targetHandle);
 
-  const relationKind = selectedTableRelationKind.value;
-  const sourceColumn = getColumnById(conn.sourceHandle);
-  const targetColumn = getColumnById(conn.targetHandle);
+  if (analysis.connectionType == 'composition') {
+    const relationKind = selectedTableRelationKind.value;
 
-  if (sourceColumn && targetColumn
-    && sourceColumn.isPrimaryKey
-    && (targetColumn.isForeignKey || sourceColumn.isPrimaryKey)
-  ) {
+    if (!designManagerService.isNewColumnConnectionValid(analysis.sourceTableId, analysis.sourceColumnId, analysis.targetTableId, analysis.targetColumnId, relationKind)) {
+      return;
+    }
+    
     const rel = new DbTableRelation({ 
-      sourceTableId: sourceColumn.tableId,
-      sourceColumnId: sourceColumn.id,
-      targetTableId: targetColumn.tableId,
-      targetColumnId: targetColumn.id,
+      sourceTableId: analysis.sourceTableId,
+      sourceColumnId: analysis.sourceColumnId,
+      targetTableId: analysis.targetTableId,
+      targetColumnId: analysis.targetColumnId,
       kind: relationKind
     });
+    
+    addRelation(rel);
+  } 
+  else if (analysis.connectionType == 'inheritance') {
+    if (!designManagerService.isNewTableConnectionValid(analysis.sourceTableId, analysis.targetTableId)) {
+      return;
+    }
+
+    const rel = new DbTableRelation({ 
+      sourceTableId: analysis.sourceTableId,
+      sourceColumnId: undefined,
+      targetTableId: analysis.targetTableId,
+      targetColumnId: undefined,
+      kind: DbTableRelationKind.InheritsFrom
+    });
+    
     addRelation(rel);
   }
 }
@@ -78,8 +165,12 @@ function onRelationChange(evs: EdgeChange[]) {
   for (const ev of evs) {
     switch (ev.type) {
       case 'remove': 
-        if (ev.sourceHandle && ev.targetHandle) {
-          removeRelation(ev.sourceHandle, ev.targetHandle);
+        const analysis = analyzeConnection(ev.source, ev.sourceHandle, ev.target, ev.targetHandle);
+
+        if (analysis.connectionType == 'inheritance') {
+          removeTableRelationByKey(analysis.sourceTableId, analysis.targetTableId);
+        } else if (analysis.connectionType == 'composition'){
+          removeColumnRelationByKey(analysis.sourceColumnId, analysis.targetColumnId);
         }
         break;
     }
@@ -93,7 +184,9 @@ function onNodeChange(evs: NodeChange[]) {
         removeTable(ev.id);
         break;
       case 'position':
-        emit('tableMove', ev.position.x, ev.position.y, ev.id);
+        if (ev.position) {
+          emit('tableMove', ev.position.x, ev.position.y, ev.id);
+        }
         break;
     }
   }

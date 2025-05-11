@@ -7,8 +7,12 @@ import DbTable from '@/model/DbTable';
 import DbTableColumn from '@/model/DbTableColumn';
 import { useDbTableStore } from '../stores/DbTableStore';
 import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
-import { Handle, Position } from '@vue-flow/core';
+import { Handle, Position, type Connection } from '@vue-flow/core';
 import { Button, InputText } from 'primevue';
+import { useDbTableRelationStore } from '@/stores/DbTableRelationStore';
+import DbTableRelationKind from '@/model/DbTableRelationKind';
+import { useService } from '@/composables/useService';
+import DesignManagerService from '@/services/DesignManagerService';
 
 
 const props = defineProps<{
@@ -22,12 +26,15 @@ const emit = defineEmits<{
 }>();
 
 
-const { getTableByKey: getTableById, updateTable } = useDbTableStore();
+const { getTableByKey, updateTable } = useDbTableStore();
 const { getColumnsByTableId, addColumn } = useDbTableColumnStore();
+const { getRelationsBySourceTableId } = useDbTableRelationStore();
+
+const designManagerService = useService(DesignManagerService);
 
 
 const model = reactive(function() {
-  const tab = getTableById(props.tableId);
+  const tab = getTableByKey(props.tableId);
   if (tab) {
     return tab;
   } else {
@@ -40,7 +47,11 @@ watch(model, (value) => updateTable(value));
 
 
 const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.id));
-
+const inheritsFromTable = computed(() => 
+  getRelationsBySourceTableId(props.tableId)
+  .filter(r => r.kind == DbTableRelationKind.InheritsFrom)
+  .length > 0
+);
 
 function onAddColumnClick() {
   const col = new DbTableColumn({ tableId: model.id });
@@ -59,7 +70,14 @@ function onAddColumnClick() {
     @mouseup="(ev) => $emit('mouseup', ev)"
     @click="(ev) => $emit('click', ev)"
   >
-    <Handle :id="model.id" type="source" :position="Position.Top"/>
+    <Handle 
+      :id="model.id" 
+      type="source" 
+      :position="Position.Top" 
+      :connectableStart="!inheritsFromTable"
+      :connectableEnd="false"
+    />
+
     <div class="table-header">
       <InputText type="text" v-model="model.name" placeholder="Table name" size="large"/>
     </div>
@@ -69,7 +87,14 @@ function onAddColumnClick() {
       </template>
       <Button class="add-column-btn" @click="onAddColumnClick">+</Button>
     </ul>
-    <Handle :id="model.id" type="target" :position="Position.Bottom"/>
+
+    <Handle 
+      :id="model.id" 
+      type="target" 
+      :position="Position.Bottom" 
+      :connectableStart="false" 
+      :connectableEnd="true"
+    />
   </div>
   
 </template>

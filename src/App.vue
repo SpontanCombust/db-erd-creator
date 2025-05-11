@@ -12,6 +12,7 @@ import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory'
 import DesignSerializerService from './services/DesignSerializerService';
 import JsonPersistenceService from './services/JsonPersistenceService';
 import DbDataTypeTemplateProviderService from './services/DbDataTypeTemplateProviderService';
+import DesignManagerService from './services/DesignManagerService';
 
 
 const routes = {
@@ -46,6 +47,7 @@ provideService(OdbcConnectionStringFactory);
 provideService(DesignSerializerService, designSerializerService);
 provideService(JsonPersistenceService, new JsonPersistenceService(designSerializerService));
 provideService(DbDataTypeTemplateProviderService);
+provideService(DesignManagerService);
 
 </script>
 

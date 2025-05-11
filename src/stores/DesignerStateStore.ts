@@ -33,6 +33,11 @@ export const useDesignerStateStore = defineStore('DesignerState', () => {
     }
 
     function setSelectedTableRelationKind(kind: DbTableRelationKind) {
+        // inheritance is handled separately and not in context of columns
+        if (kind == DbTableRelationKind.InheritsFrom) {
+            kind = DbTableRelationKind.OneToMany;
+        }
+
         selectedTableRelationKind.value = kind;
     }
 

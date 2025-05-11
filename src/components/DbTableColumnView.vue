@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 import DbTableColumn from '@/model/DbTableColumn';
-import { Handle, Position } from '@vue-flow/core';
+import { Handle, Position, type Connection } from '@vue-flow/core';
 import { computed, onMounted, reactive, ref, useTemplateRef, watch } from 'vue';
 import { Button, Checkbox, IftaLabel, InputText, Popover, Select } from 'primevue';
 
@@ -66,6 +66,15 @@ const keyColor = computed(() => {
 });
 
 
+function isValidConnectionSource(conn: Connection) : boolean {
+  return model.isPrimaryKey;
+}
+
+function isValidConnectionTarget(conn: Connection) : boolean {
+  return model.isPrimaryKey || model.isForeignKey;
+}
+
+
 
 const availableDataTypes = Array.from(dataTypeTemplateProviderService.availableDataTypeTemplates()).map(dt => ({
   value: dt,
@@ -123,8 +132,7 @@ function onDeleteColumn() {
     type="target"
     :style="{ opacity: (model.isPrimaryKey || model.isForeignKey) ? 1 : 0 }" 
     :position="Position.Left"
-    :connectableStart="false"
-    :connectableEnd="true"
+    :isValidConnection="isValidConnectionTarget"
   />
 
   <div class="table-column-key" @click="switchKeyType">
@@ -174,8 +182,7 @@ function onDeleteColumn() {
     type="source" 
     :style="{ opacity: model.isPrimaryKey ? 1 : 0 }" 
     :position="Position.Right"
-    :connectableStart="true"
-    :connectableEnd="false"
+    :isValidConnection="isValidConnectionSource"
   />
 </li>
   
