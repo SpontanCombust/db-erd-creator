@@ -2,8 +2,9 @@
 
 import { computed, onUpdated, ref, useTemplateRef, watch } from 'vue';
 import { storeToRefs } from 'pinia';
-import { ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent } from 'primevue';
-import { Button } from 'primevue'
+import { Button, ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent } from 'primevue';
+import { Codemirror } from 'vue-codemirror';
+import { sql as codeMirrorSql } from '@codemirror/lang-sql'
 import * as tauriDialog from '@tauri-apps/plugin-dialog';
 import * as tauriFs from '@tauri-apps/plugin-fs';
 
@@ -272,8 +273,17 @@ async function commitSql() {
     </div>
 
     <div id="designer-output" v-if="generatedSqlText">
-      <textarea>{{ generatedSqlText }}</textarea>
-      <textarea :style="{ color: 'orange' }" placeholder="Errors and warnings">{{ sqlCommitResult }}</textarea>
+      <div id="designer-output-sql">
+        <Codemirror 
+          v-model="generatedSqlText"
+          :indent-with-tab="true"
+          :tab-size="2"
+          :extensions="[codeMirrorSql()]"
+          :disabled="true"
+          :options="{ theme: 'eclipse' }"
+        />
+      </div>
+      <textarea id="designer-output-errors" :style="{ color: 'orange' }" placeholder="Errors and warnings">{{ sqlCommitResult }}</textarea>
       <ButtonGroup>
         <Button @click="generatedSql = []; sqlCommitResult = ''">Close</Button>
         <Button @click="commitSql">Commit</Button>
@@ -372,7 +382,7 @@ async function commitSql() {
   right: 2em;
 
   width: 50rem;
-  height: 60%;
+  height: 70%;
   padding: 0.5em;
   gap: 0.5em;
 
@@ -388,10 +398,12 @@ async function commitSql() {
   font-family: 'Courier New', Courier, monospace;
 }
 
-#designer-output > textarea:nth-of-type(1) {
+#designer-output-sql {
   flex: 60%;
+  overflow: auto;
 }
-#designer-output > textarea:nth-of-type(2) {
+
+#designer-output-errors {
   flex: 30%;
   max-height: 10em;
 }
