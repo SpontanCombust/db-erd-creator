@@ -13,6 +13,7 @@ import DesignSerializerService from './services/DesignSerializerService';
 import JsonPersistenceService from './services/JsonPersistenceService';
 import DbDataTypeTemplateProviderService from './services/DbDataTypeTemplateProviderService';
 import DesignManagerService from './services/DesignManagerService';
+import DesignMirProcessor from './services/DesignMirProcessor';
 
 
 const routes = {
@@ -41,13 +42,15 @@ const currentView = computed(() => {
 
 
 const designSerializerService = new DesignSerializerService();
+const designMirProcessor = new DesignMirProcessor();
 
-provideService(SqlEmitterService);
 provideService(OdbcConnectionStringFactory);
 provideService(DesignSerializerService, designSerializerService);
 provideService(JsonPersistenceService, new JsonPersistenceService(designSerializerService));
 provideService(DbDataTypeTemplateProviderService);
 provideService(DesignManagerService);
+provideService(DesignMirProcessor, designMirProcessor);
+provideService(SqlEmitterService, new SqlEmitterService(designMirProcessor));
 
 </script>
 
