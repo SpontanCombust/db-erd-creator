@@ -1,14 +1,14 @@
 <script setup lang="ts">
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, useTemplateRef, watch } from 'vue';
+import { Handle, Position, type Connection } from '@vue-flow/core';
+import { Button, Checkbox, InputText, Popover } from 'primevue';
 
 import DbTableColumnView from './DbTableColumnView.vue';
 import DbTable from '@/model/DbTable';
 import DbTableColumn from '@/model/DbTableColumn';
 import { useDbTableStore } from '../stores/DbTableStore';
 import { useDbTableColumnStore } from '../stores/DbTableColumnStore';
-import { Handle, Position, type Connection } from '@vue-flow/core';
-import { Button, InputText } from 'primevue';
 import { useDbTableRelationStore } from '@/stores/DbTableRelationStore';
 import DbTableRelationKind from '@/model/DbTableRelationKind';
 import { useService } from '@/composables/useService';
@@ -26,7 +26,7 @@ const emit = defineEmits<{
 }>();
 
 
-const { getTableByKey, updateTable } = useDbTableStore();
+const { getTableByKey, updateTable, removeTable } = useDbTableStore();
 const { getColumnsByTableId, addColumn } = useDbTableColumnStore();
 const { getRelationsBySourceTableId } = useDbTableRelationStore();
 
@@ -44,6 +44,18 @@ const model = reactive(function() {
 }());
 
 watch(model, (value) => updateTable(value));
+
+
+const attributesPopoverRef = useTemplateRef('attrPopover');
+
+function toggleAttributesPopover(ev: Event) {
+  attributesPopoverRef.value?.toggle(ev);
+}
+
+function onDeleteTable() {
+  removeTable(model.id);
+  //FIXME columns and relations should also get removed 
+}
 
 
 const columnIds = computed(() => getColumnsByTableId(props.tableId).map(c => c.id));
@@ -80,6 +92,7 @@ function onAddColumnClick() {
 
     <div class="table-header">
       <InputText type="text" v-model="model.name" placeholder="Table name" size="large"/>
+      <Button class="attributes-btn" type="button" icon="pi pi-ellipsis-v" @click="toggleAttributesPopover"/>
     </div>
     <ul class="table-content">
       <template v-for="columnId in columnIds">
@@ -87,6 +100,16 @@ function onAddColumnClick() {
       </template>
       <Button class="add-column-btn" @click="onAddColumnClick">+</Button>
     </ul>
+
+    <Popover ref="attrPopover" class="attributes-popover">
+      <div>
+        <Checkbox v-model="model.isAbstract" inputId="attrIsAbstract" binary/>
+        <label for="attrIsAbstract">Abstract</label>
+      </div>
+      <div>
+        <Button @click="onDeleteTable" label="Delete" severity="danger"/>
+      </div>
+    </Popover>
 
     <Handle 
       :id="model.id" 
@@ -121,13 +144,14 @@ function onAddColumnClick() {
   outline-offset: 0.2em;
 }
 
+
 .table-header {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  justify-content: center;
   align-items: center;
 
-  padding-bottom: 0.4em;
-  margin-bottom: 0.4em;
+  padding: 0.4em 0.0em 0.4em 2em;
 
   border-bottom: 0.1em solid black;
 }
@@ -135,7 +159,30 @@ function onAddColumnClick() {
 .table-header .p-inputtext {
   text-align: center;
   height: 2em;
+  margin-right: 0.5em;
 }
+
+.table-header .attributes-btn {
+  height: 1em;
+  width: 1.5em;
+}
+
+.attributes-popover .p-popover-content > div {
+  margin: 0.5em 0;
+}
+
+.attributes-popover .p-popover-content label {
+  margin-left: 0.5em;
+}
+
+.attributes-popover .p-popover-content .p-inputtext {
+  height: 2em;
+}
+
+.attributes-popover .p-popover-content > div:last-of-type {
+  margin-top: 1.5em;
+}
+
 
 .table-content {
   list-style: none;

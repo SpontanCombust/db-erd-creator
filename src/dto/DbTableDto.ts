@@ -3,4 +3,5 @@ export default interface DbTableDto {
     name: string;
     posX: number;
     posY: number;
+    isAbstract: boolean;
 }

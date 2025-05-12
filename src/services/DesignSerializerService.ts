@@ -43,7 +43,8 @@ export default class DesignSerializerService {
             id: model.id,
             name: model.name,
             posX: model.posX,
-            posY: model.posY
+            posY: model.posY,
+            isAbstract: model.isAbstract
         };
     }
 
@@ -52,7 +53,8 @@ export default class DesignSerializerService {
             id: dto.id ?? NIL,
             name: dto.name,
             posX: dto.posX,
-            posY: dto.posY
+            posY: dto.posY,
+            isAbstract: dto.isAbstract
         });
     }
 
