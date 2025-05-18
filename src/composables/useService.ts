@@ -11,5 +11,9 @@ export function provideService<S>(serviceClass: ServiceClass<S>, serviceInstance
 
 export function useService<S extends Object>(serviceClass: ServiceClass<S>) : S {
     const serviceName = serviceClass.name;
-    return inject(serviceName, new serviceClass());
+    const injected = inject<S>(serviceName);
+    if (!injected) {
+        throw new Error(serviceClass.name + ' service was not provided!');
+    }
+    return injected;
 }
