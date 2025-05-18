@@ -14,7 +14,30 @@ export async function isConnectedToDb() : Promise<boolean> {
 }
 
 export async function executeDbQuery(query: string) : Promise<string> {
-    return await invoke('db_execute', { query });
+    query = query.trim();
+    console.log(query);
+    const res = await invoke<string>('db_execute', { query });
+    return res;
+}
+
+export interface DbQueryResult {
+    columnNames: string[],
+    records: string[][]
+}
+
+export async function executeDbSelectQuery(query: string) : Promise<DbQueryResult> {
+    query = query.trim();
+    console.log(query);
+    const res = await invoke<string>('db_execute', { query });
+
+    const resLines = res.split('\n');
+    const columnNames = resLines[0].split(';');
+    const records = resLines.slice(1).map(ln => ln.split(';'));
+
+    return {
+        columnNames,
+        records
+    };
 }
 
 export async function disconnectFromDb() : Promise<void> {

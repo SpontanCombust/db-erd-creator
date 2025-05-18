@@ -14,6 +14,7 @@ import JsonImportExportService from './services/JsonImportExportService';
 import DbDataTypeTemplateProviderService from './services/DbDataTypeTemplateProviderService';
 import DesignManagerService from './services/DesignManagerService';
 import DesignMirProcessor from './services/DesignMirProcessor';
+import DesignPersistenceService from './services/DesignPersistenceService';
 
 
 const routes = {
@@ -52,6 +53,7 @@ provideService(DbDataTypeTemplateProviderService);
 provideService(DesignManagerService, designManagerService);
 provideService(DesignMirProcessor, designMirProcessor);
 provideService(SqlEmitterService, new SqlEmitterService(designMirProcessor));
+provideService(DesignPersistenceService, new DesignPersistenceService(designManagerService, designDtoMapper));
 
 </script>
 

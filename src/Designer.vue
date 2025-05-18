@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { computed, onUpdated, ref, useTemplateRef, watch } from 'vue';
+import { computed, onMounted, onUpdated, ref, useTemplateRef, watch } from 'vue';
 import { storeToRefs } from 'pinia';
 import { Button, ButtonGroup, FileUpload, FloatLabel, Select, ToggleButton, type FileUploadSelectEvent } from 'primevue';
 import { Codemirror } from 'vue-codemirror';
@@ -19,14 +19,14 @@ import { useService } from './composables/useService';
 import JsonImportExportService from './services/JsonImportExportService';
 import DbTableInheritanceKind from './model/DbTableInheritanceKind';
 import DesignerPane from './components/DesignerPane.vue';
+import DesignPersistenceService from './services/DesignPersistenceService';
 
 
 const sqlEmitterService = useService(SqlEmitterService);
 const jsonPersistenceService = useService(JsonImportExportService);
+const designPersistenceService = useService(DesignPersistenceService);
 
 const { dbName } = useDbConnectionStore();
-
-
 const designerStateStore = useDesignerStateStore();
 
 const { 
@@ -45,7 +45,26 @@ const {
 } = designerStateStore;
 
 
-async function loadDesign(ev: FileUploadSelectEvent) {
+
+async function loadLatestDesign() {
+  try {
+    await designPersistenceService.loadCurrentDesignFromDatabase();
+  } catch (err: any) {
+    err = 'Failed to load latest design from database\n' + err;
+    tauriDialog.message(err, { title: 'Database error', kind: 'error' })
+  }
+}
+
+async function saveDesign() {
+  try {
+    await designPersistenceService.saveCurrentDesignToDatabase();
+  } catch (err: any) {
+    err = 'Failed to save design to database\n' + err;
+    tauriDialog.message(err, { title: 'Database error', kind: 'error' })
+  }
+}
+
+async function importDesign(ev: FileUploadSelectEvent) {
   if (ev.files) {
     const file = ev.files instanceof File ? ev.files : ev.files.at(0);
     if (!file) {
@@ -62,7 +81,7 @@ async function loadDesign(ev: FileUploadSelectEvent) {
   }
 }
 
-async function saveDesign() {
+async function exportDesign() {
   const filePath = await tauriDialog.save({
     title: 'Save design',
     defaultPath: `${dbName}.json`,
@@ -78,6 +97,11 @@ async function saveDesign() {
     await tauriFs.writeTextFile(filePath, json);
   }
 }
+
+
+onMounted(() => {
+  loadLatestDesign();
+});
 
 
 
@@ -231,10 +255,12 @@ async function commitSql() {
 
 
 <template>
-  <div ref="designer" id="designer">
+  <div ref="designer" id="designer" @keydown.ctrl.s="saveDesign" tabindex="0">
     <div id="designer-menubar">
-      <Button @click="saveDesign" label="Save" icon="pi pi-save"/>
-      <FileUpload mode="basic" accept="application/json" @select="loadDesign" custom-upload auto chooseLabel="Load" chooseIcon="pi pi-upload"/>
+      <Button @click="saveDesign" label="Save" icon="pi pi-save"></Button>
+
+      <FileUpload mode="basic" accept="application/json" @select="importDesign" custom-upload auto chooseLabel="Import" chooseIcon="pi pi-upload"/>
+      <Button @click="exportDesign" label="Export" icon="pi pi-download"></Button>
 
       <FloatLabel variant="on">
         <Select labelId="designerToolboxTableInheritanceKind" 

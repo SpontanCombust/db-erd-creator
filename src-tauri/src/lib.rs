@@ -18,7 +18,7 @@ impl Database {
           let headline = cursor.column_names()?.filter_map(|c| c.ok()).collect::<Vec<_>>().join(";");
           out_lines.push(headline);
 
-          let mut buffers = TextRowSet::for_cursor(256, &mut cursor, Some(1024))?;
+          let mut buffers = TextRowSet::for_cursor(256, &mut cursor, None)?;
           let mut row_set_cursor = cursor.bind_buffer(&mut buffers)?;
 
           while let Some(batch) = row_set_cursor.fetch()? {
