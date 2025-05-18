@@ -14,26 +14,22 @@ import DbTableRelation from "@/model/DbTableRelation";
 import DbTableRelationKind from "@/model/DbTableRelationKind";
 
 
-export default class DesignSerializerService {
-    serializeDesignToJson(design: DbDesign) : string {
-        const designDto: DbDesignDto = {
-            tables: design.tables.map(t => this.tableModelToDto(t)),
-            columns: design.columns.map(c => this.columnModelToDto(c)),
-            relations: design.relations.map(r => this.relationModelToDto(r)),
-            tableInheritanceKind: this.tableInheritanceKindModelToDto(design.tableInheritanceKind)
+export default class DesignDtoMapper {
+    public mapDesignModelToDto(model: DbDesign) : DbDesignDto {
+        return {
+            tables: model.tables.map(t => this.tableModelToDto(t)),
+            columns: model.columns.map(c => this.columnModelToDto(c)),
+            relations: model.relations.map(r => this.relationModelToDto(r)),
+            tableInheritanceKind: this.tableInheritanceKindModelToDto(model.tableInheritanceKind)
         };
-
-        return JSON.stringify(designDto, null, 2);
     }
 
-    deserializeDesignFromJson(json: string) : DbDesign {
-        const designDto: DbDesignDto = JSON.parse(json);
-
+    public mapDesignDtoToModel(dto: DbDesignDto) : DbDesign {
         return {
-            tables: designDto.tables ? designDto.tables.map(t => this.tableDtoToModel(t)) : [],
-            columns: designDto.columns ? designDto.columns.map(c => this.columnDtoToModel(c)) : [],
-            relations: designDto.relations ? designDto.relations.map(r => this.relationDtoToModel(r)) : [],
-            tableInheritanceKind: designDto.tableInheritanceKind ? this.tableInheritanceKindDtoToModel(designDto.tableInheritanceKind) : DbTableInheritanceKind.SingleTable
+            tables: dto.tables ? dto.tables.map(t => this.tableDtoToModel(t)) : [],
+            columns: dto.columns ? dto.columns.map(c => this.columnDtoToModel(c)) : [],
+            relations: dto.relations ? dto.relations.map(r => this.relationDtoToModel(r)) : [],
+            tableInheritanceKind: dto.tableInheritanceKind ? this.tableInheritanceKindDtoToModel(dto.tableInheritanceKind) : DbTableInheritanceKind.SingleTable
         }
     }
 

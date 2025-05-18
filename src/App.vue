@@ -9,7 +9,7 @@ import Disconnect from './Disconnect.vue';
 import { provideService } from './composables/useService';
 import SqlEmitterService from './services/SqlEmitterService';
 import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
-import DesignSerializerService from './services/DesignSerializerService';
+import DesignDtoMapper from './services/DesignDtoMapper';
 import JsonPersistenceService from './services/JsonPersistenceService';
 import DbDataTypeTemplateProviderService from './services/DbDataTypeTemplateProviderService';
 import DesignManagerService from './services/DesignManagerService';
@@ -41,12 +41,12 @@ const currentView = computed(() => {
 });
 
 
-const designSerializerService = new DesignSerializerService();
+const designDtoMapper = new DesignDtoMapper();
 const designMirProcessor = new DesignMirProcessor();
 
 provideService(OdbcConnectionStringFactory);
-provideService(DesignSerializerService, designSerializerService);
-provideService(JsonPersistenceService, new JsonPersistenceService(designSerializerService));
+provideService(DesignDtoMapper, designDtoMapper);
+provideService(JsonPersistenceService, new JsonPersistenceService(designDtoMapper));
 provideService(DbDataTypeTemplateProviderService);
 provideService(DesignManagerService);
 provideService(DesignMirProcessor, designMirProcessor);

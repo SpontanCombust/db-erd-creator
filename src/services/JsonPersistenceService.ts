@@ -1,15 +1,16 @@
 import { useDbTableStore } from "@/stores/DbTableStore";
-import type DesignSerializerService from "./DesignSerializerService";
+import type DesignDtoMapper from "./DesignDtoMapper";
 import { useDbTableColumnStore } from "@/stores/DbTableColumnStore";
 import { useDbTableRelationStore } from "@/stores/DbTableRelationStore";
 import type DbDesign from "@/model/DbDesign";
 import { useDesignerStateStore } from "@/stores/DesignerStateStore";
+import type DbDesignDto from "@/dto/DbDesignDto";
 
 export default class JsonPersistenceService {
-    private serializerService: DesignSerializerService;
+    private dtoMapper: DesignDtoMapper;
 
-    constructor(serializerService: DesignSerializerService) {
-        this.serializerService = serializerService;
+    constructor(dtoMapper: DesignDtoMapper) {
+        this.dtoMapper = dtoMapper;
     }
 
 
@@ -25,8 +26,10 @@ export default class JsonPersistenceService {
             relations: [...relations],
             tableInheritanceKind: selectedTableInheritanceKind
         };
+        const designDto = this.dtoMapper.mapDesignModelToDto(design);
+        const json = JSON.stringify(designDto);
 
-        return this.serializerService.serializeDesignToJson(design);
+        return json;
     }
 
     loadDesignFromJson(json: string) {
@@ -39,7 +42,8 @@ export default class JsonPersistenceService {
         clearColumns();
         clearRelations();
 
-        const design = this.serializerService.deserializeDesignFromJson(json);
+        const designDto: DbDesignDto = JSON.parse(json);
+        const design = this.dtoMapper.mapDesignDtoToModel(designDto);
         
         for (const t of design.tables) {
             addTable(t);
