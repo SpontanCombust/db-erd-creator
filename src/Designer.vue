@@ -16,13 +16,13 @@ import { useDbConnectionStore } from './stores/DbConnectionStore';
 import { useDesignerStateStore } from './stores/DesignerStateStore';
 import MoveDesignerTool from './components/MoveDesignerTool.vue';
 import { useService } from './composables/useService';
-import JsonPersistenceService from './services/JsonPersistenceService';
+import JsonImportExportService from './services/JsonImportExportService';
 import DbTableInheritanceKind from './model/DbTableInheritanceKind';
 import DesignerPane from './components/DesignerPane.vue';
 
 
 const sqlEmitterService = useService(SqlEmitterService);
-const jsonPersistenceService = useService(JsonPersistenceService);
+const jsonPersistenceService = useService(JsonImportExportService);
 
 const { dbName } = useDbConnectionStore();
 
@@ -55,7 +55,7 @@ async function loadDesign(ev: FileUploadSelectEvent) {
     const json = await file.text();
 
     try {
-      jsonPersistenceService.loadDesignFromJson(json);
+      jsonPersistenceService.importDesignFromJson(json);
     } catch (err: any) {
       console.error(err);
     }
@@ -72,7 +72,7 @@ async function saveDesign() {
     ]
   });
 
-  const json = jsonPersistenceService.saveCurrentDesignToJson();
+  const json = jsonPersistenceService.exportCurrentDesignToJson();
 
   if (filePath) {
     await tauriFs.writeTextFile(filePath, json);

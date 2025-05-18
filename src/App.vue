@@ -10,7 +10,7 @@ import { provideService } from './composables/useService';
 import SqlEmitterService from './services/SqlEmitterService';
 import OdbcConnectionStringFactory from './services/OdbcConnectionStringFactory';
 import DesignDtoMapper from './services/DesignDtoMapper';
-import JsonPersistenceService from './services/JsonPersistenceService';
+import JsonImportExportService from './services/JsonImportExportService';
 import DbDataTypeTemplateProviderService from './services/DbDataTypeTemplateProviderService';
 import DesignManagerService from './services/DesignManagerService';
 import DesignMirProcessor from './services/DesignMirProcessor';
@@ -46,7 +46,7 @@ const designMirProcessor = new DesignMirProcessor();
 
 provideService(OdbcConnectionStringFactory);
 provideService(DesignDtoMapper, designDtoMapper);
-provideService(JsonPersistenceService, new JsonPersistenceService(designDtoMapper));
+provideService(JsonImportExportService, new JsonImportExportService(designDtoMapper));
 provideService(DbDataTypeTemplateProviderService);
 provideService(DesignManagerService);
 provideService(DesignMirProcessor, designMirProcessor);

@@ -6,7 +6,7 @@ import type DbDesign from "@/model/DbDesign";
 import { useDesignerStateStore } from "@/stores/DesignerStateStore";
 import type DbDesignDto from "@/dto/DbDesignDto";
 
-export default class JsonPersistenceService {
+export default class JsonImportExportService {
     private dtoMapper: DesignDtoMapper;
 
     constructor(dtoMapper: DesignDtoMapper) {
@@ -14,7 +14,7 @@ export default class JsonPersistenceService {
     }
 
 
-    saveCurrentDesignToJson() : string {
+    exportCurrentDesignToJson() : string {
         const { tables } = useDbTableStore();
         const { columns } = useDbTableColumnStore();
         const { relations } = useDbTableRelationStore();
@@ -32,7 +32,7 @@ export default class JsonPersistenceService {
         return json;
     }
 
-    loadDesignFromJson(json: string) {
+    importDesignFromJson(json: string) {
         const { clearTables, addTable } = useDbTableStore();
         const { clearColumns, addColumn } = useDbTableColumnStore();
         const { clearRelations, addRelation } = useDbTableRelationStore();
