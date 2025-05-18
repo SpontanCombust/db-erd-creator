@@ -1,9 +1,52 @@
+import type DbDesign from "@/model/DbDesign";
 import DbTableRelationKind from "@/model/DbTableRelationKind";
 import { useDbTableColumnStore } from "@/stores/DbTableColumnStore";
 import { useDbTableRelationStore } from "@/stores/DbTableRelationStore";
 import { useDbTableStore } from "@/stores/DbTableStore";
+import { useDesignerStateStore } from "@/stores/DesignerStateStore";
+
 
 export default class DesignManagerService {
+    public assembleCurrentDesign() : DbDesign {
+        const { tables } = useDbTableStore();
+        const { columns } = useDbTableColumnStore();
+        const { relations } = useDbTableRelationStore();
+        const { selectedTableInheritanceKind } = useDesignerStateStore();
+
+        const design: DbDesign = {
+            tables: [...tables],
+            columns: [...columns],
+            relations: [...relations],
+            tableInheritanceKind: selectedTableInheritanceKind
+        };
+
+        return design;
+    }
+
+    public loadDesign(design: DbDesign) {
+        const { clearTables, addTable } = useDbTableStore();
+        const { clearColumns, addColumn } = useDbTableColumnStore();
+        const { clearRelations, addRelation } = useDbTableRelationStore();
+        const { setSelectedTableInheritanceKind } = useDesignerStateStore();
+
+        clearTables();
+        clearColumns();
+        clearRelations();
+
+        for (const t of design.tables) {
+            addTable(t);
+        }
+        for (const c of design.columns) {
+            addColumn(c);
+        }
+        for (const r of design.relations) {
+            addRelation(r);
+        }
+
+        setSelectedTableInheritanceKind(design.tableInheritanceKind);
+    }
+
+
     public isNewTableConnectionValid(sourceTableId: string, targetTableId: string) : boolean {
         if (sourceTableId == targetTableId) {
             return false;

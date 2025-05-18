@@ -42,13 +42,14 @@ const currentView = computed(() => {
 
 
 const designDtoMapper = new DesignDtoMapper();
+const designManagerService = new DesignManagerService();
 const designMirProcessor = new DesignMirProcessor();
 
 provideService(OdbcConnectionStringFactory);
 provideService(DesignDtoMapper, designDtoMapper);
-provideService(JsonImportExportService, new JsonImportExportService(designDtoMapper));
+provideService(JsonImportExportService, new JsonImportExportService(designDtoMapper, designManagerService));
 provideService(DbDataTypeTemplateProviderService);
-provideService(DesignManagerService);
+provideService(DesignManagerService, designManagerService);
 provideService(DesignMirProcessor, designMirProcessor);
 provideService(SqlEmitterService, new SqlEmitterService(designMirProcessor));
 
