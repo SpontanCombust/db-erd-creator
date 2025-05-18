@@ -20,6 +20,7 @@ import JsonImportExportService from './services/JsonImportExportService';
 import DbTableInheritanceKind from './model/DbTableInheritanceKind';
 import DesignerPane from './components/DesignerPane.vue';
 import DesignPersistenceService from './services/DesignPersistenceService';
+import DesignChangeIndicator from './components/DesignChangeIndicator.vue';
 
 
 const sqlEmitterService = useService(SqlEmitterService);
@@ -46,6 +47,8 @@ const {
 
 
 
+const designChangeDetected = ref(true);
+
 async function loadLatestDesign() {
   try {
     await designPersistenceService.loadCurrentDesignFromDatabase();
@@ -58,6 +61,7 @@ async function loadLatestDesign() {
 async function saveDesign() {
   try {
     await designPersistenceService.saveCurrentDesignToDatabase();
+    designChangeDetected.value = false;
   } catch (err: any) {
     err = 'Failed to save design to database\n' + err;
     tauriDialog.message(err, { title: 'Database error', kind: 'error' })
@@ -257,8 +261,10 @@ async function commitSql() {
 <template>
   <div ref="designer" id="designer" @keydown.ctrl.s="saveDesign" tabindex="0">
     <div id="designer-menubar">
-      <Button @click="saveDesign" label="Save" icon="pi pi-save"></Button>
-
+      <div id="save-btn-wrapper">
+        <Button @click="saveDesign" label="Save" icon="pi pi-save"/>
+        <DesignChangeIndicator v-model="designChangeDetected"/>
+      </div>
       <FileUpload mode="basic" accept="application/json" @select="importDesign" custom-upload auto chooseLabel="Import" chooseIcon="pi pi-upload"/>
       <Button @click="exportDesign" label="Export" icon="pi pi-download"></Button>
 
@@ -351,6 +357,10 @@ async function commitSql() {
   height: 2.6em;
   gap: 0.2em;
   margin-bottom: 1em;
+}
+
+#save-btn-wrapper {
+  position: relative;
 }
 
 
