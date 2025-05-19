@@ -103,8 +103,9 @@ async function exportDesign() {
 }
 
 
-onMounted(() => {
-  loadLatestDesign();
+onMounted(async () => {
+  await loadLatestDesign();
+  designChangeDetected.value = false;
 });
 
 
