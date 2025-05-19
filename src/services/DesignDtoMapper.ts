@@ -40,7 +40,8 @@ export default class DesignDtoMapper {
             name: model.name,
             posX: model.posX,
             posY: model.posY,
-            isAbstract: model.isAbstract
+            isAbstract: model.isAbstract,
+            color: model.color
         };
     }
 
@@ -50,7 +51,8 @@ export default class DesignDtoMapper {
             name: dto.name,
             posX: dto.posX,
             posY: dto.posY,
-            isAbstract: dto.isAbstract
+            isAbstract: dto.isAbstract,
+            color: dto.color
         });
     }
 

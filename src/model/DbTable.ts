@@ -7,6 +7,7 @@ export default class DbTable {
     public posX: number;
     public posY: number;
     public isAbstract: boolean;
+    public color?: string;
 
 
     constructor(args: {
@@ -14,12 +15,14 @@ export default class DbTable {
         name?: string,
         posX?: number,
         posY?: number,
-        isAbstract?: boolean
+        isAbstract?: boolean,
+        color?: string
     }) {
         this.id = args.id ?? uuid();
         this.name = args.name ?? "NewTable";
         this.posX = args.posX ?? 0;
         this.posY = args.posY ?? 0;
         this.isAbstract = args.isAbstract ?? false;
+        this.color = args.color;
     }
 }
