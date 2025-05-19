@@ -190,6 +190,7 @@ function onAddColumnClick() {
 .attributes-popover .p-popover-content .p-colorpicker input {
   width: 1.2em;
   height: 1.2em;
+  border: 2px solid rgb(170, 170, 200);
 }
 
 
