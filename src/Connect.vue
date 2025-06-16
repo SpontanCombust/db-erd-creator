@@ -75,6 +75,20 @@ async function browseSqliteDb() {
   }
 }
 
+async function newSqliteDb() {
+  const filePath = await tauriDialog.save({
+    title: 'Create SQLite database file',
+    filters: [
+      { name: 'SQLite Database Files', extensions: ['sqlite', 'db'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+  });
+
+  if (filePath) {
+    formDatabase.value = filePath;
+  }
+}
+
 const connectionError = ref('');
 const { storeConnection } = useDbConnectionStore();
 
@@ -147,6 +161,7 @@ async function tryConnecting() {
           <label for="formDatabase">Database file path</label>
         </FloatLabel>
         <Button @click="browseSqliteDb" icon="pi pi-upload" label="Browse"/>
+        <Button @click="newSqliteDb" icon="pi pi-plus-circle" label="New"/>
       </div>
     </template>
     <template v-else>
@@ -199,13 +214,14 @@ async function tryConnecting() {
   }
 
   form > * {
-    min-width: 20em;
+    min-width: 30em;
   }
 
   #sqlite-db {
     display: flex;
     flex-direction: row;
     gap: 0.1em;
+    justify-content: center;
   }
 
   #sqlite-db > span {
@@ -213,7 +229,12 @@ async function tryConnecting() {
   }
 
   #sqlite-db > button {
-    /* display: inline-block; */
+    min-width: fit-content;
+    padding: 0 1em;
+  }
+
+  #sqlite-db input[type="text"] {
+    min-width: 25em;
   }
 
   #selectedDriver {
