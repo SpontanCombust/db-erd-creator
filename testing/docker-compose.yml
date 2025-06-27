@@ -1,0 +1,18 @@
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: mssql
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=#DeveloperTest123
+      - MSSQL_PID=Developer
+    ports:
+      - 1433:1433
+  mysql:
+    image: mysql:9.3.0
+    container_name: mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=#DeveloperTest123
+    ports:
+      - 3306:3306
