@@ -1,0 +1,21 @@
+@startuml usecases
+
+left to right direction
+
+"Użytkownik" as User
+
+User --> (Import projektu bazy danych) 
+(Import projektu bazy danych) --> (Logowanie do bazy danych) : << include >>
+User --> (Eksport projektu bazy danych) 
+(Eksport projektu bazy danych) --> (Logowanie do bazy danych) : << include >>
+User --> (Ustawianie typu dziedziczenia tabel) 
+(Ustawianie typu dziedziczenia tabel) --> (Logowanie do bazy danych) : << include >>
+User --> (Tworzenie projektu bazy danych) 
+(Tworzenie projektu bazy danych) --> (Tworzenie tabel i kolumn) : << include >>
+(Tworzenie projektu bazy danych) --> (Tworzenie relacji między tabelami) : << include >>
+(Tworzenie projektu bazy danych) --> (Logowanie do bazy danych) : << include >>
+(Tworzenie projektu bazy danych) <-- (Zapis stanu projektu do bazy danych) : << extend >>
+(Tworzenie projektu bazy danych) <-- (Wygenerowanie kodu SQL) : << extend >>
+(Wygenerowanie kodu SQL) <-- (Zastosowanie projektu do bazy danych) : << extend >>
+
+@enduml

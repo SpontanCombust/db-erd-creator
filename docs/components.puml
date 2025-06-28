@@ -1,0 +1,149 @@
+@startuml components-diag
+
+' left to right direction
+' top to bottom direction
+
+component views {
+    class App {
+
+    }
+
+    class Connect {
+
+    }
+
+    class Designer {
+
+    }
+
+    class Disconnect {
+
+    }
+
+    class NotFound {
+
+    }
+}
+
+component components {
+    class AddTableDesignerTool {
+
+    }
+
+    class MoveDesignerTool {
+
+    }
+
+    class DbTableColumnView {
+
+    }
+
+    class DbTableRelationView {
+
+    }
+
+    class DbTableView {
+
+    }
+
+    class DesignerPane {
+
+    }
+}
+
+component services {
+    class DbDataTypeTemplateProviderService {
+
+    }
+
+    class DesignDtoMapper {
+
+    }
+
+    class DesignManagerService {
+
+    }
+
+    class DesignMirProcessor {
+
+    }
+
+    class DesignPersistenceService {
+
+    }
+
+    class SqlEmitterService {
+
+    }
+}
+
+component stores {
+    class DbConnectionStore {
+
+    }
+
+    class DbTableStore {
+
+    }
+
+    class DbTableColumnStore {
+
+    }
+
+    class DbTableRelationStore {
+
+    }
+
+    class DesignerStateStore {
+
+    }
+}
+
+component model {
+    class DbDataType {
+
+    }
+
+    class DbDesign {
+
+    }
+
+    class DbTable {
+
+    }
+
+    class DbTableColumn {
+
+    }
+
+    class DbTableInheritanceKind {
+
+    }
+
+    class DbTableRelation {
+        
+    }
+
+    class DbTableRelationKind {
+
+    }
+
+    class SupportedDbKind {
+
+    }
+}
+
+component api {
+    class TauriApi {
+
+    }
+}
+
+views *-left- components
+views o--down- services
+components o--down- services
+services o--down- stores
+services o-left- api
+stores *--down- model
+
+@enduml
